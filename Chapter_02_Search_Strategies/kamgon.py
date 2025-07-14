@@ -353,7 +353,7 @@ def uninform_search(problem: Problem, waitlist:Waitlist, initial: S, goal: S, ve
     # เริ่มต้นด้วยสถานะแรกสุดเป็นโหนดราก
     waitlist.put(Node(initial))
     # เก็บ "สถานะที่สำรวจแล้ว" (explored states) เพื่อหลีกเลี่ยงการวนซ้ำ (cycles) และการคำนวณซ้ำซ้อน
-    explored: Set[S] = {initial}
+    explored: Set[S] = set()
     count = 0 # ตัวนับสำหรับขั้นตอน/โหนดที่ประมวลผล
 
     while not waitlist.is_empty(): # ทำต่อตราบใดที่ยังมีโหนดให้สำรวจ
@@ -367,14 +367,49 @@ def uninform_search(problem: Problem, waitlist:Waitlist, initial: S, goal: S, ve
             return current_node # คืนค่าโหนดเป้าหมาย ซึ่งมีเส้นทางไปสู่โซลูชัน
 
         # ขยายโหนดปัจจุบัน และเพิ่มสถานะลูกใหม่ที่ยังไม่เคยสำรวจเข้าไปใน waitlist
-        for child in current_node.expand(problem):
-            if child.state not in explored:
-                explored.add(child.state) # ทำเครื่องหมายสถานะใหม่ว่าสำรวจแล้ว
+        if current_node.state not in explored:
+            explored.add(current_node.state) # ทำเครื่องหมายสถานะใหม่ว่าสำรวจแล้ว
+            if verbose: print(f"  -> เพิ่มไปยัง explored: {current_node.state}")
+            for child in current_node.expand(problem):     
                 waitlist.put(child) # เพิ่มโหนดลูกเข้าไปใน waitlist เพื่อสำรวจต่อไป
                 if verbose: print(f"  -> เพิ่มไปยัง waitlist: {child.state}")
+            if verbose: print(f" :: waitlist ปัจจุบัน: {waitlist}")
 
     if verbose: print("ไม่พบโซลูชัน")
     return None # ถ้า waitlist ว่างเปล่าและไม่พบเป้าหมาย แสดงว่าไม่มีโซลูชัน
+
+def breadth_first_search(problem: Problem, initial: S, goal: S, verbose: bool = False) -> Optional[Node]:
+    """
+    อัลกอริทึม Breadth-First Search
+    เป็นการค้นหาแบบ กว้างก่อน ใช้ Queue ในการเก็บโหนดรอสำรวจ
+    :param problem: อินสแตนซ์ของปัญหาการค้นหา
+    :param initial: สถานะเริ่มต้นของปัญหา
+    :param goal: สถานะเป้าหมายของปัญหา
+    :param verbose: ถ้าเป็น True จะพิมพ์ข้อมูลกระบวนการค้นหาโดยละเอียด
+    :return: โหนดเป้าหมาย (goal node) หากพบโซลูชัน, ไม่อย่างนั้นคืนค่า None
+    """
+    return uninform_search(
+        problem,
+        Queue(),
+        initial,
+        goal,
+        verbose=verbose)
+def depth_first_search(problem: Problem, initial: S, goal: S, verbose: bool = False) -> Optional[Node]:
+    """
+    อัลกอริทึม Depth-First Search
+    เป็นการค้นหาแบบ ลึกก่อน ใช้ stack ในการเก็บโหนดรอสำรวจ
+    :param problem: อินสแตนซ์ของปัญหาการค้นหา
+    :param initial: สถานะเริ่มต้นของปัญหา
+    :param goal: สถานะเป้าหมายของปัญหา
+    :param verbose: ถ้าเป็น True จะพิมพ์ข้อมูลกระบวนการค้นหาโดยละเอียด
+    :return: โหนดเป้าหมาย (goal node) หากพบโซลูชัน, ไม่อย่างนั้นคืนค่า None
+    """
+    return uninform_search(
+        problem,
+        Stack(),
+        initial,
+        goal,
+        verbose=verbose)
 
 def best_first_search(problem: Problem, initial: S, goal: S, f: Callable[[Node, S], float], verbose: bool = False) -> Optional[Node]:
     """
@@ -407,7 +442,7 @@ def best_first_search(problem: Problem, initial: S, goal: S, f: Callable[[Node, 
             if verbose: print(f"พบเป้าหมาย: {current_node}")
             return current_node
 
-        # ถ้าสถานะปัจจุบันถูกสำรวจไปแล้ว ให้ข้ามไป (จัดการกรณีที่มีการเพิ่มโหนดซ้ำด้วยต้นทุนที่สูงกว่า)
+        # ถ้าสถานะปัจจุบันถูกสำรวจไปแล้ว ให้ข้ามไป (จัดการกรณีที่มีการเพิ่มโหนดซ้ำด้วยต้นทุนที่สูงกว่า,หากมี replace ไม่จำเป็นต้องมีส่วนนี้)
         if current_node.state in explored:
             continue
             
@@ -421,6 +456,8 @@ def best_first_search(problem: Problem, initial: S, goal: S, f: Callable[[Node, 
             if child.state not in explored: # นี่คือความแตกต่างสำคัญจาก uniform_cost_search เพื่อความเหมาะสมในกราฟบางประเภท
                 waitlist.put(child, f(child, goal)) # เพิ่มโหนดลูกด้วยค่า f ที่คำนวณได้
                 if verbose: print(f"  -> เพิ่มไปยัง waitlist: {child.state} ด้วย f(n)={f(child, goal)}")
+                                
+        if verbose: print(f" :: waitlist ปัจจุบัน: {waitlist}")
     
     if verbose: print("ไม่พบโซลูชัน")
     return None
