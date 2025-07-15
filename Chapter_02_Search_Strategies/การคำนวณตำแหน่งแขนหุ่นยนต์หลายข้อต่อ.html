@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบงานการคำนวณตำแหน่งแขนหุ่นยนต์หลายข้อต่อ</title>
+    <style>
+        body {
+            font-family: 'Sarabun', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .section h2 {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .control-group input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 150px;
+            margin-top: 5px;
+        }
+        
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        canvas {
+            border: 2px solid #2c3e50;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        
+        .calculations {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .formula {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .result {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #ecf0f1;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .tab:hover {
+            background: #5dade2;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .info-box {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .math {
+            font-style: italic;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>การคำนวณตำแหน่งแขนหุ่นยนต์หลายข้อต่อ</h1>
+        
+        <div class="tab-container">
+            <button class="tab active" onclick="showTab('motor1')">1 มอเตอร์</button>
+            <button class="tab" onclick="showTab('motor2')">2 มอเตอร์</button>
+            <button class="tab" onclick="showTab('motor3')">3 มอเตอร์</button>
+            <button class="tab" onclick="showTab('motor4')">3 มอเตอร์ + เป้าหมาย</button>
+            <button class="tab" onclick="showTab('motor5')">3 มอเตอร์ + เป้าหมาย + อุปสรรค</button>
+        </div>
+        
+        <div id="motor1" class="tab-content active">
+            <div class="section">
+                <h2>แขนหุ่นยนต์ 1 ข้อต่อ (1 DOF)</h2>
+                
+                <div class="info-box">
+                    <strong>หลักการ:</strong> แขนหุ่นยนต์ 1 ข้อต่อจะมีการหมุนรอบจุดฐาน ตำแหน่งปลายแขนจะเป็นวงกลม
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="l1">ความยาว L₁ (cm)</label>
+                        <input type="number" id="l1" value="100" min="10" max="200" oninput="calculate1DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta1">มุม θ₁ (องศา)</label>
+                        <input type="number" id="theta1" value="45" min="-180" max="180" oninput="calculate1DOF(); updateSlider('theta1')">
+                        <input type="range" id="theta1-slider" min="-180" max="180" value="45" oninput="updateInput('theta1'); calculate1DOF()">
+                    </div>
+                </div>
+                
+                <div class="canvas-container">
+                    <canvas id="canvas1" width="400" height="400"></canvas>
+                </div>
+                
+                <div class="calculations">
+                    <div class="formula">
+                        <strong>สูตรการคำนวณ:</strong><br>
+                        <span class="math">x = L₁ × cos(θ₁)</span><br>
+                        <span class="math">y = L₁ × sin(θ₁)</span>
+                    </div>
+                    <div class="result" id="result1"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="motor2" class="tab-content">
+            <div class="section">
+                <h2>แขนหุ่นยนต์ 2 ข้อต่อ (2 DOF)</h2>
+                
+                <div class="info-box">
+                    <strong>หลักการ:</strong> แขนหุ่นยนต์ 2 ข้อต่อจะมีการหมุนที่ข้อต่อฐานและข้อต่อที่สอง ทำให้มีความยืดหยุ่นมากขึ้น
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="l1_2">ความยาว L₁ (cm)</label>
+                        <input type="number" id="l1_2" value="80" min="10" max="200" oninput="calculate2DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="l2_2">ความยาว L₂ (cm)</label>
+                        <input type="number" id="l2_2" value="60" min="10" max="200" oninput="calculate2DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta1_2">มุม θ₁ (องศา)</label>
+                        <input type="number" id="theta1_2" value="30" min="-180" max="180" oninput="calculate2DOF(); updateSlider('theta1_2')">
+                        <input type="range" id="theta1_2-slider" min="-180" max="180" value="30" oninput="updateInput('theta1_2'); calculate2DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta2_2">มุม θ₂ (องศา)</label>
+                        <input type="number" id="theta2_2" value="60" min="-180" max="180" oninput="calculate2DOF(); updateSlider('theta2_2')">
+                        <input type="range" id="theta2_2-slider" min="-180" max="180" value="60" oninput="updateInput('theta2_2'); calculate2DOF()">
+                    </div>
+                </div>
+                
+                <div class="canvas-container">
+                    <canvas id="canvas2" width="400" height="400"></canvas>
+                </div>
+                
+                <div class="calculations">
+                    <div class="formula">
+                        <strong>สูตรการคำนวณ:</strong><br>
+                        <strong>ข้อต่อที่ 1:</strong><br>
+                        <span class="math">x₁ = L₁ × cos(θ₁)</span><br>
+                        <span class="math">y₁ = L₁ × sin(θ₁)</span><br>
+                        <strong>ตำแหน่งปลายแขน:</strong><br>
+                        <span class="math">x₂ = L₁ × cos(θ₁) + L₂ × cos(θ₁ + θ₂)</span><br>
+                        <span class="math">y₂ = L₁ × sin(θ₁) + L₂ × sin(θ₁ + θ₂)</span>
+                    </div>
+                    <div class="result" id="result2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="motor3" class="tab-content">
+            <div class="section">
+                <h2>แขนหุ่นยนต์ 3 ข้อต่อ (3 DOF)</h2>
+                
+                <div class="info-box">
+                    <strong>หลักการ:</strong> แขนหุ่นยนต์ 3 ข้อต่อจะมีการหมุนที่ข้อต่อฐาน ข้อต่อที่สอง และข้อต่อที่สาม ทำให้สามารถเข้าถึงตำแหน่งได้หลากหลายมากขึ้น
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="l1_3">ความยาว L₁ (cm)</label>
+                        <input type="number" id="l1_3" value="60" min="10" max="200" oninput="calculate3DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="l2_3">ความยาว L₂ (cm)</label>
+                        <input type="number" id="l2_3" value="50" min="10" max="200" oninput="calculate3DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="l3_3">ความยาว L₃ (cm)</label>
+                        <input type="number" id="l3_3" value="40" min="10" max="200" oninput="calculate3DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta1_3">มุม θ₁ (องศา)</label>
+                        <input type="number" id="theta1_3" value="20" min="-180" max="180" oninput="calculate3DOF(); updateSlider('theta1_3')">
+                        <input type="range" id="theta1_3-slider" min="-180" max="180" value="20" oninput="updateInput('theta1_3'); calculate3DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta2_3">มุม θ₂ (องศา)</label>
+                        <input type="number" id="theta2_3" value="45" min="-180" max="180" oninput="calculate3DOF(); updateSlider('theta2_3')">
+                        <input type="range" id="theta2_3-slider" min="-180" max="180" value="45" oninput="updateInput('theta2_3'); calculate3DOF()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta3_3">มุม θ₃ (องศา)</label>
+                        <input type="number" id="theta3_3" value="30" min="-180" max="180" oninput="calculate3DOF(); updateSlider('theta3_3')">
+                        <input type="range" id="theta3_3-slider" min="-180" max="180" value="30" oninput="updateInput('theta3_3'); calculate3DOF()">
+                    </div>
+                </div>
+                
+                <div class="canvas-container">
+                    <canvas id="canvas3" width="400" height="400"></canvas>
+                </div>
+                
+                <div class="calculations">
+                    <div class="formula">
+                        <strong>สูตรการคำนวณ:</strong><br>
+                        <strong>ข้อต่อที่ 1:</strong><br>
+                        <span class="math">x₁ = L₁ × cos(θ₁)</span><br>
+                        <span class="math">y₁ = L₁ × sin(θ₁)</span><br>
+                        <strong>ข้อต่อที่ 2:</strong><br>
+                        <span class="math">x₂ = L₁ × cos(θ₁) + L₂ × cos(θ₁ + θ₂)</span><br>
+                        <span class="math">y₂ = L₁ × sin(θ₁) + L₂ × sin(θ₁ + θ₂)</span><br>
+                        <strong>ตำแหน่งปลายแขน:</strong><br>
+                        <span class="math">x₃ = x₂ + L₃ × cos(θ₁ + θ₂ + θ₃)</span><br>
+                        <span class="math">y₃ = y₂ + L₃ × sin(θ₁ + θ₂ + θ₃)</span>
+                    </div>
+                    <div class="result" id="result3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="motor4" class="tab-content">
+            <div class="section">
+                <h2>แขนหุ่นยนต์ 3 ข้อต่อ พร้อมตำแหน่งเป้าหมาย</h2>
+                
+                <div class="info-box">
+                    <strong>หลักการ:</strong> คำนวณตำแหน่งปลายแขน (End-effector) และหาระยะห่างจากตำแหน่งเป้าหมาย (Target) ที่ต้องการ
+                </div>
+
+                <h3 style="color: #28a745; text-align:center;">ตำแหน่งเป้าหมาย</h3>
+                <div class="controls" style="justify-content: center;">
+                    <div class="control-group">
+                        <label for="targetX">เป้าหมาย X (cm)</label>
+                        <input type="number" id="targetX" value="120" oninput="calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="targetY">เป้าหมาย Y (cm)</label>
+                        <input type="number" id="targetY" value="-90" oninput="calculate3DOFWithTarget()">
+                    </div>
+                </div>
+                <hr style="margin: 20px 0;">
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="l1_4">ความยาว L₁ (cm)</label>
+                        <input type="number" id="l1_4" value="60" min="10" max="200" oninput="calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="l2_4">ความยาว L₂ (cm)</label>
+                        <input type="number" id="l2_4" value="50" min="10" max="200" oninput="calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="l3_4">ความยาว L₃ (cm)</label>
+                        <input type="number" id="l3_4" value="40" min="10" max="200" oninput="calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta1_4">มุม θ₁ (องศา)</label>
+                        <input type="number" id="theta1_4" value="20" min="-180" max="180" oninput="calculate3DOFWithTarget(); updateSlider('theta1_4')">
+                        <input type="range" id="theta1_4-slider" min="-180" max="180" value="20" oninput="updateInput('theta1_4'); calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta2_4">มุม θ₂ (องศา)</label>
+                        <input type="number" id="theta2_4" value="45" min="-180" max="180" oninput="calculate3DOFWithTarget(); updateSlider('theta2_4')">
+                        <input type="range" id="theta2_4-slider" min="-180" max="180" value="45" oninput="updateInput('theta2_4'); calculate3DOFWithTarget()">
+                    </div>
+                    <div class="control-group">
+                        <label for="theta3_4">มุม θ₃ (องศา)</label>
+                        <input type="number" id="theta3_4" value="30" min="-180" max="180" oninput="calculate3DOFWithTarget(); updateSlider('theta3_4')">
+                        <input type="range" id="theta3_4-slider" min="-180" max="180" value="30" oninput="updateInput('theta3_4'); calculate3DOFWithTarget()">
+                    </div>
+                </div>
+
+                
+                
+
+                <div class="canvas-container">
+                    <canvas id="canvas4" width="400" height="400"></canvas>
+                </div>
+                
+                <div class="calculations">
+                     <div class="formula">
+                        <strong>สูตรการคำนวณ:</strong><br>
+                        <strong>ตำแหน่งปลายแขน (x₃, y₃):</strong> คำนวณเหมือนแขน 3 ข้อต่อ<br>
+                        <strong>ระยะห่าง (Distance):</strong><br>
+                        <span class="math">d = √((targetX - x₃)² + (targetY - y₃)²)</span>
+                    </div>
+                    <div class="result" id="result4"></div>
+                </div>
+            </div>
+        </div>
+        <div id="motor5" class="tab-content">
+    <div class="section">
+        <h2>แขนหุ่นยนต์ 3 ข้อต่อ พร้อมเป้าหมายและอุปสรรค</h2>
+        
+        <div class="info-box">
+            <strong>หลักการ:</strong> คำนวณตำแหน่งปลายแขน, ระยะห่างถึงเป้าหมาย, และระยะห่างจากแขนแต่ละท่อนถึงอุปสรรค
+        </div>
+
+        <div class="info-box" style="background-color: #e9f5e9; border-left-color: #28a745;">
+    <details>
+        <summary style="cursor: pointer; font-weight: bold; color: #155724;">หลักการคำนวณระยะห่างจากแขนถึงอุปสรรค (Vector Projection)</summary>
+        <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-family: 'Courier New', monospace;">
+            <p>
+        การคำนวณหาระยะที่สั้นที่สุดจาก <b>ศูนย์กลางของอุปสรรค (จุด P)</b> ไปยัง <b>แขนแต่ละท่อน (ส่วนของเส้นตรง AB)</b> 
+    </p>
+            <p style="margin-top:0;"><b>1. กำหนดจุด:</b></p>
+            <ul>
+                <li>อุปสรรค: <span class="math">P(pₓ, pᵧ)</span></li>
+                <li>ข้อต่อเริ่มต้น: <span class="math">A(aₓ, aᵧ)</span></li>
+                <li>ข้อต่อสิ้นสุด: <span class="math">B(bₓ, bᵧ)</span></li>
+            </ul>
+
+            <p><b>2. คำนวณค่า <span class="math">t</span>:</b><br>
+            ค่า <span class="math">t</span> คือสัดส่วนที่บอกว่าจุดตั้งฉากอยู่ ณ ตำแหน่งใดบนเส้นตรง AB</p>
+            <p><span class="math">t = ((pₓ - aₓ)(bₓ - aₓ) + (pᵧ - aᵧ)(bᵧ - aᵧ)) / ((bₓ - aₓ)² + (bᵧ - aᵧ)²)</span></p>
+
+            <p><b>3. ตรวจสอบช่วงของ <span class="math">t</span>:</b></p>
+            <ul>
+                <li>ถ้า <span class="math">t < 0</span>: จุดที่ใกล้ที่สุดคือ A</li>
+                <li>ถ้า <span class="math">t > 1</span>: จุดที่ใกล้ที่สุดคือ B</li>
+                <li>ถ้า <span class="math">0 ≤ t ≤ 1</span>: จุดที่ใกล้ที่สุดอยู่บนเส้น AB</li>
+            </ul>
+            <p>เราสามารถปรับค่า <span class="math">t</span> ให้อยู่ในช่วง <span class="math">[0, 1]</span> (หากเกินช่วงก็ปรับให้เป็นค่าสุดขอบนี้) เพื่อให้ได้จุดที่ใกล้ที่สุดที่อยู่บน <i>ส่วนของเส้นตรง</i> AB เท่านั้น</p>
+
+            <p><b>4. หาพิกัดจุดที่ใกล้ที่สุด <span class="math">C(cₓ, cᵧ)</span>:</b></p>
+            <p><span class="math">cₓ = aₓ + t ⋅ (bₓ - aₓ)</span></p>
+            <p><span class="math">cᵧ = aᵧ + t ⋅ (bᵧ - aᵧ)</span></p>
+
+            <p><b>5. คำนวณระยะทางสุดท้าย (Distance):</b><br>
+            คือระยะห่างระหว่างจุด P และ C</p>
+            <p><span class="math">Distance = √((pₓ - cₓ)² + (pᵧ - cᵧ)²)</span></p>
+            <a href="https://www.youtube.com/watch?v=egmZJU-1zPU" target="_blank">ศึกษาเพิ่มเติม</a>
+        </div>
+    </details>
+</div>
+        <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+            <div>
+                <h3 style="color: #28a745; text-align:center;">ตำแหน่งเป้าหมาย</h3>
+                <div class="controls" style="justify-content: center;">
+                    <div class="control-group">
+                        <label for="targetX_5">เป้าหมาย X</label>
+                        <input type="number" id="targetX_5" value="120" oninput="calculate3DOFWithTargetAndObstacle()">
+                    </div>
+                    <div class="control-group">
+                        <label for="targetY_5">เป้าหมาย Y</label>
+                        <input type="number" id="targetY_5" value="-90" oninput="calculate3DOFWithTargetAndObstacle()">
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 style="color: #e74c3c; text-align:center;">ตำแหน่งอุปสรรค</h3>
+                <div class="controls" style="justify-content: center;">
+                    <div class="control-group">
+                        <label for="obsX_5">อุปสรรค X</label>
+                        <input type="number" id="obsX_5" value="100" oninput="calculate3DOFWithTargetAndObstacle()">
+                    </div>
+                    <div class="control-group">
+                        <label for="obsY_5">อุปสรรค Y</label>
+                        <input type="number" id="obsY_5" value="20" oninput="calculate3DOFWithTargetAndObstacle()">
+                    </div>
+                    <div class="control-group">
+                        <label for="obsR_5">รัศมี</label>
+                        <input type="number" id="obsR_5" value="15" min="1" oninput="calculate3DOFWithTargetAndObstacle()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <hr style="margin: 20px 0;">
+
+        <h3 style="color: #2c3e50;">การควบคุมแขนหุ่นยนต์</h3>
+        <div class="controls">
+             <div class="control-group">
+                <label for="l1_5">L₁ (cm)</label>
+                <input type="number" id="l1_5" value="60" min="10" max="200" oninput="calculate3DOFWithTargetAndObstacle()">
+            </div>
+            <div class="control-group">
+                <label for="l2_5">L₂ (cm)</label>
+                <input type="number" id="l2_5" value="50" min="10" max="200" oninput="calculate3DOFWithTargetAndObstacle()">
+            </div>
+            <div class="control-group">
+                <label for="l3_5">L₃ (cm)</label>
+                <input type="number" id="l3_5" value="40" min="10" max="200" oninput="calculate3DOFWithTargetAndObstacle()">
+            </div>
+            <div class="control-group">
+                <label for="theta1_5">θ₁ (°)</label>
+                <input type="number" id="theta1_5" value="20" min="-180" max="180" oninput="calculate3DOFWithTargetAndObstacle(); updateSlider('theta1_5')">
+                <input type="range" id="theta1_5-slider" min="-180" max="180" value="20" oninput="updateInput('theta1_5'); calculate3DOFWithTargetAndObstacle()">
+            </div>
+            <div class="control-group">
+                <label for="theta2_5">θ₂ (°)</label>
+                <input type="number" id="theta2_5" value="45" min="-180" max="180" oninput="calculate3DOFWithTargetAndObstacle(); updateSlider('theta2_5')">
+                <input type="range" id="theta2_5-slider" min="-180" max="180" value="45" oninput="updateInput('theta2_5'); calculate3DOFWithTargetAndObstacle()">
+            </div>
+            <div class="control-group">
+                <label for="theta3_5">θ₃ (°)</label>
+                <input type="number" id="theta3_5" value="30" min="-180" max="180" oninput="calculate3DOFWithTargetAndObstacle(); updateSlider('theta3_5')">
+                <input type="range" id="theta3_5-slider" min="-180" max="180" value="30" oninput="updateInput('theta3_5'); calculate3DOFWithTargetAndObstacle()">
+            </div>
+        </div>      
+        
+
+        <div class="canvas-container">
+            <canvas id="canvas5" width="400" height="400"></canvas>
+        </div>
+        
+        <div class="calculations">
+             <div class="formula">
+                <strong>สูตรการคำนวณ:</strong><br>
+                - ระยะห่างถึงเป้าหมาย: <span class="math">d = √((targetX - x₃)² + (targetY - y₃)²)</span><br>
+                - ระยะห่างถึงอุปสรรค: คำนวณระยะทางที่สั้นที่สุดจากจุด (Obstacle Center) ไปยังเส้นแขนแต่ละท่อน
+            </div>
+            <div class="result" id="result5"></div>
+        </div>
+    </div>
+</div>
+
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(tabId) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            // Recalculate when switching tabs
+            if (tabId === 'motor1') calculate1DOF();
+            if (tabId === 'motor2') calculate2DOF();
+            if (tabId === 'motor3') calculate3DOF();
+            if (tabId === 'motor4') calculate3DOFWithTarget();
+            if (tabId === 'motor5') calculate3DOFWithTargetAndObstacle();
+        }
+        
+        // Slider and input synchronization
+        function updateSlider(inputId) {
+            const input = document.getElementById(inputId);
+            const slider = document.getElementById(inputId + '-slider');
+            slider.value = input.value;
+        }
+        
+        function updateInput(inputId) {
+            const input = document.getElementById(inputId);
+            const slider = document.getElementById(inputId + '-slider');
+            input.value = slider.value;
+        }
+        
+        // Convert degrees to radians
+        function degToRad(degrees) {
+            return degrees * Math.PI / 180;
+        }
+        
+        // Drawing functions
+        function drawGrid(ctx, width, height) {
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i <= height; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(width, i);
+                ctx.stroke();
+            }
+        }
+        
+        function drawAxes(ctx, centerX, centerY) {
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(400, centerY);
+            ctx.stroke();
+            
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, 400);
+            ctx.stroke();
+        }
+        
+        function drawPoint(ctx, x, y, color = '#e74c3c', size = 5) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        function drawLine(ctx, x1, y1, x2, y2, color = '#2c3e50', width = 3) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+        
+        // 1 DOF Calculation
+        function calculate1DOF() {
+            const l1 = parseFloat(document.getElementById('l1').value);
+            const theta1 = parseFloat(document.getElementById('theta1').value);
+            
+            const theta1Rad = degToRad(theta1);
+            const x = l1 * Math.cos(theta1Rad);
+            const y = l1 * Math.sin(theta1Rad);
+            
+            document.getElementById('result1').innerHTML = `
+                <strong>ผลการคำนวณ:</strong><br>
+                θ₁ = ${theta1}° (${theta1Rad.toFixed(4)} rad)<br>
+                x = ${l1} × cos(${theta1}°) = ${x.toFixed(2)} cm<br>
+                y = ${l1} × sin(${theta1}°) = ${y.toFixed(2)} cm<br>
+                <strong>ตำแหน่งปลายแขน: (${x.toFixed(2)}, ${y.toFixed(2)}) cm</strong>
+            `;
+            
+            const canvas = document.getElementById('canvas1');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 400, 400);
+            const centerX = 200;
+            const centerY = 200;
+            const scale = 1.5;
+            drawGrid(ctx, 400, 400);
+            drawAxes(ctx, centerX, centerY);
+            const endX = centerX + (x / scale);
+            const endY = centerY - (y / scale);
+            drawLine(ctx, centerX, centerY, endX, endY, '#3498db', 4);
+            drawPoint(ctx, centerX, centerY, '#2c3e50', 6);
+            drawPoint(ctx, endX, endY, '#e74c3c', 6);
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, l1 / scale, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // 2 DOF Calculation
+        function calculate2DOF() {
+            const l1 = parseFloat(document.getElementById('l1_2').value);
+            const l2 = parseFloat(document.getElementById('l2_2').value);
+            const theta1 = parseFloat(document.getElementById('theta1_2').value);
+            const theta2 = parseFloat(document.getElementById('theta2_2').value);
+            
+            const theta1Rad = degToRad(theta1);
+            const theta2Rad = degToRad(theta2);
+            
+            const x1 = l1 * Math.cos(theta1Rad);
+            const y1 = l1 * Math.sin(theta1Rad);
+            const x2 = x1 + l2 * Math.cos(theta1Rad + theta2Rad);
+            const y2 = y1 + l2 * Math.sin(theta1Rad + theta2Rad);
+            
+            document.getElementById('result2').innerHTML = `
+                <strong>ผลการคำนวณ:</strong><br>
+                θ₁ = ${theta1}°, θ₂ = ${theta2}°<br>
+                <strong>ข้อต่อที่ 1:</strong> x₁ = ${x1.toFixed(2)} cm, y₁ = ${y1.toFixed(2)} cm<br>
+                <strong>ตำแหน่งปลายแขน:</strong> x₂ = ${x2.toFixed(2)} cm, y₂ = ${y2.toFixed(2)} cm<br>
+                <strong>ระยะจากจุดเริ่มต้น:</strong> ${Math.sqrt(x2*x2 + y2*y2).toFixed(2)} cm
+            `;
+            
+            const canvas = document.getElementById('canvas2');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 400, 400);
+            const centerX = 200;
+            const centerY = 200;
+            const scale = 1.5;
+            drawGrid(ctx, 400, 400);
+            drawAxes(ctx, centerX, centerY);
+            
+            const joint1X = centerX + (x1 / scale);
+            const joint1Y = centerY - (y1 / scale);
+            const endX = centerX + (x2 / scale);
+            const endY = centerY - (y2 / scale);
+            
+            drawLine(ctx, centerX, centerY, joint1X, joint1Y, '#3498db', 4);
+            drawLine(ctx, joint1X, joint1Y, endX, endY, '#e67e22', 4);
+            drawPoint(ctx, centerX, centerY, '#2c3e50', 6);
+            drawPoint(ctx, joint1X, joint1Y, '#9b59b6', 6);
+            drawPoint(ctx, endX, endY, '#e74c3c', 6);
+            
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, (l1 + l2) / scale, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // 3 DOF Calculation
+        function calculate3DOF() {
+            const l1 = parseFloat(document.getElementById('l1_3').value);
+            const l2 = parseFloat(document.getElementById('l2_3').value);
+            const l3 = parseFloat(document.getElementById('l3_3').value);
+            const theta1 = parseFloat(document.getElementById('theta1_3').value);
+            const theta2 = parseFloat(document.getElementById('theta2_3').value);
+            const theta3 = parseFloat(document.getElementById('theta3_3').value);
+            
+            const theta1Rad = degToRad(theta1);
+            const theta2Rad = degToRad(theta2);
+            const theta3Rad = degToRad(theta3);
+            
+            const x1 = l1 * Math.cos(theta1Rad);
+            const y1 = l1 * Math.sin(theta1Rad);
+            const x2 = x1 + l2 * Math.cos(theta1Rad + theta2Rad);
+            const y2 = y1 + l2 * Math.sin(theta1Rad + theta2Rad);
+            const x3 = x2 + l3 * Math.cos(theta1Rad + theta2Rad + theta3Rad);
+            const y3 = y2 + l3 * Math.sin(theta1Rad + theta2Rad + theta3Rad);
+            
+            document.getElementById('result3').innerHTML = `
+                <strong>ผลการคำนวณ:</strong><br>
+                θ₁ = ${theta1}°, θ₂ = ${theta2}°, θ₃ = ${theta3}°<br>
+                <strong>ข้อต่อที่ 1:</strong> x₁ = ${x1.toFixed(2)} cm, y₁ = ${y1.toFixed(2)} cm<br>
+                <strong>ข้อต่อที่ 2:</strong> x₂ = ${x2.toFixed(2)} cm, y₂ = ${y2.toFixed(2)} cm<br>
+                <strong>ตำแหน่งปลายแขน:</strong> x₃ = ${x3.toFixed(2)} cm, y₃ = ${y3.toFixed(2)} cm<br>
+                <strong>ระยะจากจุดเริ่มต้น:</strong> ${Math.sqrt(x3*x3 + y3*y3).toFixed(2)} cm
+            `;
+            
+            const canvas = document.getElementById('canvas3');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 400, 400);
+            const centerX = 200;
+            const centerY = 200;
+            const scale = 1.8;
+            drawGrid(ctx, 400, 400);
+            drawAxes(ctx, centerX, centerY);
+            
+            const joint1X = centerX + (x1 / scale);
+            const joint1Y = centerY - (y1 / scale);
+            const joint2X = centerX + (x2 / scale);
+            const joint2Y = centerY - (y2 / scale);
+            const endX = centerX + (x3 / scale);
+            const endY = centerY - (y3 / scale);
+            
+            drawLine(ctx, centerX, centerY, joint1X, joint1Y, '#3498db', 4);
+            drawLine(ctx, joint1X, joint1Y, joint2X, joint2Y, '#e67e22', 4);
+            drawLine(ctx, joint2X, joint2Y, endX, endY, '#27ae60', 4);
+            drawPoint(ctx, centerX, centerY, '#2c3e50', 6);
+            drawPoint(ctx, joint1X, joint1Y, '#9b59b6', 6);
+            drawPoint(ctx, joint2X, joint2Y, '#f39c12', 6);
+            drawPoint(ctx, endX, endY, '#e74c3c', 6);
+            
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, (l1 + l2 + l3) / scale, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 3 DOF with Target Calculation
+        function calculate3DOFWithTarget() {
+            const l1 = parseFloat(document.getElementById('l1_4').value);
+            const l2 = parseFloat(document.getElementById('l2_4').value);
+            const l3 = parseFloat(document.getElementById('l3_4').value);
+            const theta1 = parseFloat(document.getElementById('theta1_4').value);
+            const theta2 = parseFloat(document.getElementById('theta2_4').value);
+            const theta3 = parseFloat(document.getElementById('theta3_4').value);
+            const targetX = parseFloat(document.getElementById('targetX').value);
+            const targetY = parseFloat(document.getElementById('targetY').value);
+            
+            const theta1Rad = degToRad(theta1);
+            const theta2Rad = degToRad(theta2);
+            const theta3Rad = degToRad(theta3);
+            
+            const x1 = l1 * Math.cos(theta1Rad);
+            const y1 = l1 * Math.sin(theta1Rad);
+            const x2 = x1 + l2 * Math.cos(theta1Rad + theta2Rad);
+            const y2 = y1 + l2 * Math.sin(theta1Rad + theta2Rad);
+            const x3 = x2 + l3 * Math.cos(theta1Rad + theta2Rad + theta3Rad);
+            const y3 = y2 + l3 * Math.sin(theta1Rad + theta2Rad + theta3Rad);
+            
+            const distance = Math.sqrt(Math.pow(targetX - x3, 2) + Math.pow(targetY - y3, 2));
+
+            document.getElementById('result4').innerHTML = `
+                <strong>ผลการคำนวณ:</strong><br>
+                <strong>ตำแหน่งปลายแขน:</strong> x₃ = ${x3.toFixed(2)} cm, y₃ = ${y3.toFixed(2)} cm<br>
+                <strong>ตำแหน่งเป้าหมาย:</strong> (${targetX.toFixed(2)}, ${targetY.toFixed(2)}) cm<br>
+                <strong style="color: #e74c3c;">ระยะห่างถึงเป้าหมาย: ${distance.toFixed(2)} cm</strong>
+            `;
+            
+            const canvas = document.getElementById('canvas4');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 400, 400);
+            const centerX = 200;
+            const centerY = 200;
+            const scale = 1.8;
+            drawGrid(ctx, 400, 400);
+            drawAxes(ctx, centerX, centerY);
+            
+            const joint1X = centerX + (x1 / scale);
+            const joint1Y = centerY - (y1 / scale);
+            const joint2X = centerX + (x2 / scale);
+            const joint2Y = centerY - (y2 / scale);
+            const endX = centerX + (x3 / scale);
+            const endY = centerY - (y3 / scale);
+
+            const targetCanvasX = centerX + (targetX / scale);
+            const targetCanvasY = centerY - (targetY / scale);
+            
+            // Draw arms
+            drawLine(ctx, centerX, centerY, joint1X, joint1Y, '#3498db', 4);
+            drawLine(ctx, joint1X, joint1Y, joint2X, joint2Y, '#e67e22', 4);
+            drawLine(ctx, joint2X, joint2Y, endX, endY, '#27ae60', 4);
+
+            // Draw joints
+            drawPoint(ctx, centerX, centerY, '#2c3e50', 6);
+            drawPoint(ctx, joint1X, joint1Y, '#9b59b6', 6);
+            drawPoint(ctx, joint2X, joint2Y, '#f39c12', 6);
+            drawPoint(ctx, endX, endY, '#e74c3c', 6); // End-effector
+
+            // Draw target
+            drawPoint(ctx, targetCanvasX, targetCanvasY, '#28a745', 8); // Target point
+
+            // Draw line to target
+            ctx.setLineDash([3, 3]);
+            drawLine(ctx, endX, endY, targetCanvasX, targetCanvasY, '#c0392b', 2);
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, (l1 + l2 + l3) / scale, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+            const l2 = (bx - ax) * (bx - ax) + (by - ay) * (by - ay);
+            if (l2 === 0) return Math.sqrt((px - ax) * (px - ax) + (py - ay) * (py - ay));
+            
+            let t = ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            
+            const closestX = ax + t * (bx - ax);
+            const closestY = ay + t * (by - ay);
+            
+            return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+        }
+
+        // 5. 3 DOF with Target and Obstacle Calculation (Updated)
+function calculate3DOFWithTargetAndObstacle() {
+    // --- Get values from inputs (เหมือนเดิม) ---
+    const l1 = parseFloat(document.getElementById('l1_5').value);
+    const l2 = parseFloat(document.getElementById('l2_5').value);
+    const l3 = parseFloat(document.getElementById('l3_5').value);
+    const theta1 = parseFloat(document.getElementById('theta1_5').value);
+    const theta2 = parseFloat(document.getElementById('theta2_5').value);
+    const theta3 = parseFloat(document.getElementById('theta3_5').value);
+    
+    const targetX = parseFloat(document.getElementById('targetX_5').value);
+    const targetY = parseFloat(document.getElementById('targetY_5').value);
+    
+    const obsX = parseFloat(document.getElementById('obsX_5').value);
+    const obsY = parseFloat(document.getElementById('obsY_5').value);
+    const obsR = parseFloat(document.getElementById('obsR_5').value);
+
+    const theta1Rad = degToRad(theta1);
+    const theta2Rad = degToRad(theta2);
+    const theta3Rad = degToRad(theta3);
+    
+    // --- Kinematics (คำนวณตำแหน่งข้อต่อทั้งหมด) ---
+    const x1 = l1 * Math.cos(theta1Rad);
+    const y1 = l1 * Math.sin(theta1Rad);
+    const x2 = x1 + l2 * Math.cos(theta1Rad + theta2Rad);
+    const y2 = y1 + l2 * Math.sin(theta1Rad + theta2Rad);
+    const x3 = x2 + l3 * Math.cos(theta1Rad + theta2Rad + theta3Rad);
+    const y3 = y2 + l3 * Math.sin(theta1Rad + theta2Rad + theta3Rad);
+    
+    // --- Distance & Collision Calculations (เหมือนเดิม) ---
+    const distToTarget = Math.sqrt(Math.pow(targetX - x3, 2) + Math.pow(targetY - y3, 2));
+    const distToObs1 = pointToSegmentDistance(obsX, obsY, 0, 0, x1, y1);
+    const distToObs2 = pointToSegmentDistance(obsX, obsY, x1, y1, x2, y2);
+    const distToObs3 = pointToSegmentDistance(obsX, obsY, x2, y2, x3, y3);
+
+    const collision1 = distToObs1 <= obsR;
+    const collision2 = distToObs2 <= obsR;
+    const collision3 = distToObs3 <= obsR;
+
+    // --- Display Results (อัปเดตส่วนนี้) ---
+    document.getElementById('result5').innerHTML = `
+        <strong>ผลการคำนวณ:</strong>
+        <div style="padding-left: 15px; margin-top: 5px; margin-bottom: 10px;">
+            <strong>ตำแหน่งข้อต่อ:</strong>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>ข้อต่อที่ 1: (${x1.toFixed(2)}, ${y1.toFixed(2)}) cm</li>
+                <li>ข้อต่อที่ 2: (${x2.toFixed(2)}, ${y2.toFixed(2)}) cm</li>
+                <li>ปลายแขน (ข้อต่อ 3): (${x3.toFixed(2)}, ${y3.toFixed(2)}) cm</li>
+            </ul>
+        </div>
+        <strong>ระยะห่างถึงเป้าหมาย:</strong> ${distToTarget.toFixed(2)} cm
+        <hr style="margin: 10px 0;">
+        <strong>การตรวจสอบอุปสรรค (รัศมี ${obsR.toFixed(2)} cm):</strong>
+        <ul style="margin: 5px 0; padding-left: 20px;">
+            <li>แขนท่อนที่ 1: ห่าง ${distToObs1.toFixed(2)} cm ${collision1 ? '<span class="collision">⚠️ ชน!</span>' : ''}</li>
+            <li>แขนท่อนที่ 2: ห่าง ${distToObs2.toFixed(2)} cm ${collision2 ? '<span class="collision">⚠️ ชน!</span>' : ''}</li>
+            <li>แขนท่อนที่ 3: ห่าง ${distToObs3.toFixed(2)} cm ${collision3 ? '<span class="collision">⚠️ ชน!</span>' : ''}</li>
+        </ul>
+    `;
+    
+    // --- Draw Visualization (ส่วนของการวาดภาพยังคงเหมือนเดิม) ---
+    const canvas = document.getElementById('canvas5');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 400, 400);
+    
+    const centerX = 200;
+    const centerY = 200;
+    const scale = 1.8;
+    
+    drawGrid(ctx, 400, 400);
+    drawAxes(ctx, centerX, centerY);
+    
+    const j1_canvas = { x: centerX + (x1 / scale), y: centerY - (y1 / scale) };
+    const j2_canvas = { x: centerX + (x2 / scale), y: centerY - (y2 / scale) };
+    const end_canvas = { x: centerX + (x3 / scale), y: centerY - (y3 / scale) };
+    const target_canvas = { x: centerX + (targetX / scale), y: centerY - (targetY / scale) };
+    const obs_canvas = { x: centerX + (obsX / scale), y: centerY - (obsY / scale) };
+
+    const endX = centerX + (x3 / scale);
+            const endY = centerY - (y3 / scale);
+
+            const targetCanvasX = centerX + (targetX / scale);
+            const targetCanvasY = centerY - (targetY / scale);
+    
+    ctx.fillStyle = collision1 || collision2 || collision3 ? 'rgba(231, 76, 60, 0.4)' : 'rgba(149, 165, 166, 0.4)';
+    ctx.beginPath();
+    ctx.arc(obs_canvas.x, obs_canvas.y, obsR / scale, 0, 2 * Math.PI);
+    ctx.fill();
+    drawPoint(ctx, obs_canvas.x, obs_canvas.y, '#7f8c8d', 4);
+
+    drawLine(ctx, centerX, centerY, j1_canvas.x, j1_canvas.y, collision1 ? '#e74c3c' : '#3498db', 5);
+    drawLine(ctx, j1_canvas.x, j1_canvas.y, j2_canvas.x, j2_canvas.y, collision2 ? '#e74c3c' : '#e67e22', 5);
+    drawLine(ctx, j2_canvas.x, j2_canvas.y, end_canvas.x, end_canvas.y, collision3 ? '#e74c3c' : '#27ae60', 5);
+    
+    drawPoint(ctx, centerX, centerY, '#2c3e50', 6);
+    drawPoint(ctx, j1_canvas.x, j1_canvas.y, '#9b59b6', 6);
+    drawPoint(ctx, j2_canvas.x, j2_canvas.y, '#f39c12', 6);
+    drawPoint(ctx, end_canvas.x, end_canvas.y, '#c0392b', 7);
+    drawPoint(ctx, target_canvas.x, target_canvas.y, '#28a745', 8);
+
+    // Draw line to target
+            ctx.setLineDash([3, 3]);
+            drawLine(ctx, endX, endY, targetCanvasX, targetCanvasY, '#c0392b', 2);
+            ctx.setLineDash([]);
+
+    ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, (l1 + l2 + l3) / scale, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+}
+        
+        // Initialize
+        function initialize() {
+            // Fill in the other calculation calls
+            calculate1DOF();
+            calculate2DOF();
+            calculate3DOF();
+            calculate3DOFWithTarget();
+            calculate3DOFWithTargetAndObstacle();
+            // Fill in the rest of the tab-content divs from the original file for a complete page.
+        }
+
+        window.onload = initialize;
+    </script>
+</body>
+</html>
