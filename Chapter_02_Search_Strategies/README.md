@@ -1,0 +1,1 @@
+[การคำนวณตำแหน่งแขนหุ่นยนต์หลายข้อต่อ.html]([https://link-url-here.org](https://htmlpreview.github.io/?https://github.com/praisan/artificial_intelligence/blob/main/Chapter_02_Search_Strategies/การคำนวณตำแหน่งแขนหุ่นยนต์หลายข้อต่อ.html))
