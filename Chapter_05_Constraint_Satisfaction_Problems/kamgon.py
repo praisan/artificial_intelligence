@@ -1,5 +1,5 @@
 """
-Chapter_02_Search_Strategies
+Chapter_02_Search_Strategies, Chapter_05_Constraint_Satisfaction_Problems
 โมดูลนี้ใช้อัลกอริทึมการค้นหาแบบต่างๆ (ทั้งแบบที่ "ไม่รู้ข้อมูล" และแบบที่ "รู้ข้อมูล")
 เพื่อช่วยแก้ปัญหาที่กำหนดอยู่ใน "พื้นที่สถานะ" (state space)
 โดยมีคลาสพื้นฐาน (abstract class) สำหรับ:
@@ -27,7 +27,7 @@ Chapter_02_Search_Strategies
 
 import heapq
 from collections import deque
-from typing import TypeVar, List, Optional, Generic, Callable, Set, Deque, Tuple
+from typing import TypeVar, List, Dict, Any, Optional, Generic, Callable, Set, Deque, Tuple
 
 # กำหนดประเภททั่วไปสำหรับสถานะ (state)
 S = TypeVar('S')
@@ -523,7 +523,339 @@ def astar_search(problem: Problem, initial: S, goal: S, verbose: bool = False) -
         f=lambda node, g: node.path_cost + problem.heuristic(node.state, g), # f(n) = g(n) + h(n)
         verbose=verbose
     )
+
+"""
+Constraint Satisfaction Problem 
+โมดูลส่วนขยายสำหรับปัญหา Constraint Satisfaction Problem
+โดยใช้อัลกอริทึม backtracking search ในการแก้ปัญหา
+"""
+
+class CSPState:
+    """แสดงสถานะของการกำหนดค่าให้กับตัวแปรใน CSP"""
+    def __init__(self, assignment: Dict[str, Any] = None):
+        self.assignment = assignment or {}
     
+    def __eq__(self, other) -> bool:
+        return isinstance(other, CSPState) and self.assignment == other.assignment
+    
+    def __hash__(self) -> int:
+        return hash(tuple(sorted(self.assignment.items())))
+    
+    def __repr__(self) -> str:
+        return f"CSPState({self.assignment})"
+
+class CSPAction:
+    """แสดงการกระทำในการกำหนดค่าให้กับตัวแปร"""
+    def __init__(self, variable: str, value: Any):
+        self.variable = variable
+        self.value = value
+    
+    def __eq__(self, other) -> bool:
+        return (isinstance(other, CSPAction) and 
+                self.variable == other.variable and 
+                self.value == other.value)
+    
+    def __hash__(self) -> int:
+        return hash((self.variable, self.value))
+    
+    def __repr__(self) -> str:
+        return f"CSPAction({self.variable}={self.value})"
+
+class CSPProblem(Problem[CSPState, CSPAction]):
+    """
+    Framework สำหรับปัญหา Constraint Satisfaction Problem ที่สืบทอดมาจาก Problem
+    คลาสนี้จัดเตรียมโครงสร้างสำหรับปัญหา CSP ที่มีตัวแปร, domain และ constraint
+    """
+    
+    def __init__(self, variables: List[str], domains: Dict[str, List[Any]]):
+        """
+        เริ่มต้นปัญหา CSP ด้วยตัวแปรและ domain ของตัวแปร
+        
+        Args:
+            variables: รายการชื่อตัวแปร
+            domains: Dictionary ที่เชื่อมโยงตัวแปรกับค่าที่เป็นไปได้
+        """
+        self.variables = variables
+        self.domains = domains
+        self.initial_state = CSPState()
+    
+    def actions(self, state: CSPState) -> List[CSPAction]:
+        """
+        คืนค่า action ที่เป็นไปได้สำหรับสถานะปัจจุบัน
+        เป็นการ implement method ที่จำเป็นจาก Problem base class
+        
+        Args:
+            state: สถานะ CSP ปัจจุบันพร้อมการกำหนดค่าตัวแปร
+            
+        Returns:
+            รายการ CSP action ที่เป็นไปได้ (การกำหนดค่าตัวแปร)
+        """
+        unassigned_var = self.select_unassigned_variable(state)
+        if unassigned_var is None:
+            return []
+        
+        return [CSPAction(unassigned_var, value) 
+                for value in self.ordered_domain_values(unassigned_var, state)]
+    
+    def result(self, state: CSPState, action: CSPAction) -> CSPState:
+        """
+        นำ action มาใช้เพื่อสร้างสถานะใหม่
+        เป็นการ implement method ที่จำเป็นจาก Problem base class
+        
+        Args:
+            state: สถานะ CSP ปัจจุบัน
+            action: การกระทำที่จะนำมาใช้ (การกำหนดค่าตัวแปร)
+            
+        Returns:
+            สถานะ CSP ใหม่ที่มีการกำหนดค่าตัวแปรแล้ว
+        """
+        new_assignment = state.assignment.copy()
+        new_assignment[action.variable] = action.value
+        return CSPState(new_assignment)
+    
+    def goal_test(self, state: CSPState, goal: CSPState = None) -> bool:
+        """
+        ตรวจสอบว่าสถานะปัจจุบันเป็นคำตอบที่สมบูรณ์หรือไม่
+        เป็นการ implement method ที่จำเป็นจาก Problem base class
+        
+        Args:
+            state: สถานะ CSP ปัจจุบันที่จะทดสอบ
+            goal: สถานะเป้าหมาย (ไม่ใช้ใน CSP, ค่าเริ่มต้นเป็น None)
+            
+        Returns:
+            True ถ้าตัวแปรทั้งหมดได้รับการกำหนดค่าและ constraint ทั้งหมดเป็นจริง
+        """
+        if len(state.assignment) != len(self.variables):
+            return False
+        
+        # ตรวจสอบว่า constraint ทั้งหมดเป็นจริงหรือไม่
+        return self.is_complete_assignment_consistent(state.assignment)
+    
+    def path_cost(self, current_cost: float, state1: CSPState, 
+                  action: CSPAction, state2: CSPState) -> float:
+        """
+        คำนวณ path cost สำหรับ CSP (ค่าคงที่ 1 ต่อการกำหนดค่า)
+        เป็นการ implement method ที่จำเป็นจาก Problem base class
+        
+        Args:
+            current_cost: ค่าใช้จ่ายที่สะสมปัจจุบัน
+            state1: สถานะก่อนหน้า
+            action: การกระทำที่ดำเนินการ
+            state2: สถานะผลลัพธ์
+            
+        Returns:
+            path cost ที่อัปเดตแล้ว
+        """
+        return current_cost + 1
+    
+    def heuristic(self, state: CSPState, goal: CSPState = None) -> float:
+        """
+        ฟังก์ชัน heuristic สำหรับ CSP (จำนวนตัวแปรที่ยังไม่ได้กำหนดค่า)
+        เป็นการ implement method ที่จำเป็นจาก Problem base class
+        
+        Args:
+            state: สถานะ CSP ปัจจุบัน
+            goal: สถานะเป้าหมาย (ไม่ใช้ใน CSP)
+            
+        Returns:
+            ค่า heuristic (จำนวนตัวแปรที่เหลือต้องกำหนดค่า)
+        """
+        return len(self.variables) - len(state.assignment)
+    
+    def select_unassigned_variable(self, state: CSPState) -> Optional[str]:
+        """
+        เลือกตัวแปรถัดไปที่จะกำหนดค่าโดยใช้ Most Remaining Values heuristic
+        
+        Args:
+            state: สถานะ CSP ปัจจุบัน
+            
+        Returns:
+            ชื่อตัวแปรที่จะกำหนดค่าถัดไป หรือ None ถ้าตัวแปรทั้งหมดได้รับการกำหนดค่าแล้ว
+        """
+        unassigned = [var for var in self.variables if var not in state.assignment]
+        if not unassigned:
+            return None
+        return min(unassigned, key=lambda var: len(self.get_remaining_values(var, state)))
+    
+    def get_remaining_values(self, variable: str, state: CSPState) -> List[Any]:
+        """
+        หาค่าที่เหลือและเป็นไปได้สำหรับตัวแปรจากการกำหนดค่าปัจจุบัน
+        
+        Args:
+            variable: ชื่อตัวแปร
+            state: สถานะ CSP ปัจจุบัน
+            
+        Returns:
+            รายการค่าที่เป็นไปได้สำหรับตัวแปร
+        """
+        return [value for value in self.domains[variable] 
+                if self.is_consistent(variable, value, state.assignment)]
+    
+    def ordered_domain_values(self, variable: str, state: CSPState) -> List[Any]:
+        """
+        คืนค่า domain ที่เรียงลำดับตามความสอดคล้องกับ constraint
+        
+        Args:
+            variable: ชื่อตัวแปร
+            state: สถานะ CSP ปัจจุบัน
+            
+        Returns:
+            รายการค่าที่เป็นไปได้สำหรับตัวแปร
+        """
+        return self.get_remaining_values(variable, state)
+    
+    def is_consistent(self, variable: str, value: Any, assignment: Dict[str, Any]) -> bool:
+        """
+        ตรวจสอบว่าการกำหนดค่าให้กับตัวแปรสอดคล้องกับการกำหนดค่าปัจจุบันหรือไม่
+        method นี้ต้องได้รับการ implement โดย subclass
+        
+        Args:
+            variable: ชื่อตัวแปร
+            value: ค่าที่จะกำหนด
+            assignment: การกำหนดค่าตัวแปรปัจจุบัน
+            
+        Returns:
+            True ถ้าการกำหนดค่าสอดคล้องกับ constraint
+        """
+        raise NotImplementedError("Subclass ต้อง implement การตรวจสอบ constraint")
+    
+    def is_complete_assignment_consistent(self, assignment: Dict[str, Any]) -> bool:
+        """
+        ตรวจสอบว่าการกำหนดค่าที่สมบูรณ์เป็นไปตาม constraint ทั้งหมดหรือไม่
+        
+        Args:
+            assignment: การกำหนดค่าตัวแปรที่สมบูรณ์
+            
+        Returns:
+            True ถ้าการกำหนดค่าเป็นไปตาม constraint ทั้งหมด
+        """
+        for variable in self.variables:
+            if not self.is_consistent(variable, assignment[variable], assignment):
+                return False
+        return True
+
+def backtracking_search(problem: CSPProblem, verbose: bool = False) -> Optional[Dict[str, Any]]:
+    """
+    แก้ปัญหา CSP โดยใช้อัลกอริทึม backtracking search 
+    
+    Args:
+        problem: instance ของปัญหา CSP
+        verbose: เปิดใช้งานการแสดงผลรายละเอียด
+        
+    Returns:
+        Dictionary ของการกำหนดค่าตัวแปรถ้าพบคำตอบ หรือ None ถ้าไม่พบ
+    """
+    
+    class BacktrackingWaitlist:
+        """waitlist แบบกำหนดเองที่ implement พฤติกรรม backtracking"""
+        def __init__(self):
+            self._stack = []
+        
+        def put(self, node: Node, priority: Optional[float] = None):
+            self._stack.append(node)
+        
+        def get(self) -> Node:
+            return self._stack.pop()
+        
+        def is_empty(self) -> bool:
+            return len(self._stack) == 0
+    
+    def recursive_backtracking(node: Node[CSPState, CSPAction], depth: int = 0) -> Optional[Node]:
+        """
+        การ implement backtracking แบบ recursive โดยใช้โครงสร้าง Node 
+        
+        Args:
+            node: node ปัจจุบันใน search tree
+            depth: ความลึกปัจจุบันสำหรับการแสดงผล
+            
+        Returns:
+            solution node ถ้าพบคำตอบ หรือ None ถ้าไม่พบ
+        """
+        if verbose:
+            indent = "  " * depth
+            assigned_count = len(node.state.assignment)
+            total_vars = len(problem.variables)
+            print(f"{indent}กำลังสำรวจ node: {assigned_count}/{total_vars} ตัวแปรได้รับการกำหนดค่า")
+        
+        # ตรวจสอบว่าเรามีคำตอบที่สมบูรณ์หรือไม่
+        if problem.goal_test(node.state):
+            if verbose:
+                print(f"{indent}พบคำตอบแล้ว!")
+            return node
+        
+        # หา action ที่เป็นไปได้ (การกำหนดค่าตัวแปร)
+        actions = problem.actions(node.state)
+        if not actions:
+            if verbose:
+                print(f"{indent}ไม่มี action ที่เป็นไปได้")
+            return None
+        
+        # ลอง action แต่ละตัว
+        for action in actions:
+            if verbose:
+                print(f"{indent}กำลังลอง {action.variable} = {action.value}")
+            
+            # สร้าง child node
+            child_node = node.get_child_node(problem, action)
+            
+            # ค้นหาแบบ recursive จาก child นี้
+            result = recursive_backtracking(child_node, depth + 1)
+            if result is not None:
+                return result
+            
+            if verbose:
+                print(f"{indent}Backtracking จาก {action.variable} = {action.value}")
+        
+        if verbose:
+            print(f"{indent}ไม่พบคำตอบสำหรับ path ปัจจุบัน")
+        return None
+    
+    # เริ่มต้นด้วย initial state
+    initial_node = Node(problem.initial_state)
+    solution_node = recursive_backtracking(initial_node)
+    
+    if solution_node:
+        return solution_node.state.assignment
+    return None
+
+def csp_search(problem: CSPProblem, search_algorithm: str = "backtracking", 
+                          verbose: bool = False) -> Optional[Dict[str, Any]]:
+    """
+    แก้ปัญหา CSP โดยใช้อัลกอริทึมการค้นหาต่างๆ
+    
+    Args:
+        problem: instance ของปัญหา CSP
+        search_algorithm: อัลกอริทึมการค้นหาที่จะใช้ ("backtracking", "dfs", "best_first")
+        verbose: เปิดใช้งานการแสดงผลรายละเอียด
+        
+    Returns:
+        Dictionary ของการกำหนดค่าตัวแปรถ้าพบคำตอบ หรือ None ถ้าไม่พบ
+    """
+    initial_state = problem.initial_state
+    
+    # สำหรับความเข้ากันได้กับ goal_test เราสร้าง dummy goal state
+    # การทดสอบเป้าหมายจริงจะถูกจัดการโดย goal_test method ของปัญหา
+    goal_state = CSPState()
+    
+    if search_algorithm == "backtracking":
+        return backtracking_search(problem, verbose)
+    
+    elif search_algorithm == "dfs":
+        result_node = depth_first_search(problem, initial_state, goal_state, verbose)
+        return result_node.state.assignment if result_node else None
+    
+    elif search_algorithm == "best_first":
+        result_node = best_first_search(
+            problem, 
+            initial_state, 
+            goal_state,
+            f=lambda node, goal: problem.heuristic(node.state, goal),
+            verbose=verbose
+        )
+        return result_node.state.assignment if result_node else None
+    
+    else:
+        raise ValueError(f"อัลกอริทึมการค้นหาไม่รู้จัก: {search_algorithm}")
 
 # ส่วนตัวอย่างการใช้งาน
 if __name__ == '__main__':
