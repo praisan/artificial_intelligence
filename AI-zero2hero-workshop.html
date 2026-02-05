@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Student Lab: from Zero to Hero</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Chosen Palette: Comprehensive Learning -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563EB',
+                        secondary: '#059669',
+                        tertiary: '#DB2777',
+                        quaternary: '#7C3AED',
+                        quinary: '#EA580C',  // เพิ่มบรรทัดนี้
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F3F4F6;
+            color: #1F2937;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 220px;
+        }
+
+        .nav-item {
+            border-bottom: 4px solid transparent;
+        }
+
+        .nav-item.active-1 {
+            color: #2563EB;
+            border-color: #2563EB;
+            background: #EFF6FF;
+        }
+
+        .nav-item.active-2 {
+            color: #059669;
+            border-color: #059669;
+            background: #ECFDF5;
+        }
+
+        .nav-item.active-3 {
+            color: #DB2777;
+            border-color: #DB2777;
+            background: #FDF2F8;
+        }
+
+        .nav-item.active-4 {
+            color: #7C3AED;
+            border-color: #7C3AED;
+            background: #F5F3FF;
+        }
+
+        .nav-item.active-5 {
+            color: #EA580C;
+            border-color: #EA580C;
+            background: #FFF7ED;
+        }
+
+        .prompt-tag {
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .prompt-tag:hover {
+            transform: translateY(-2px);
+        }
+
+        .prompt-tag.selected {
+            ring-width: 2px;
+            ring-color: #7C3AED;
+            background-color: #F5F3FF;
+            color: #5B21B6;
+            border-color: #7C3AED;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl bg-blue-100 p-2 rounded-lg">🚀</span>
+                <div>
+                    <h1 class="text-xl font-bold leading-none text-gray-800">AI Student Lab: from Zero to Hero</h1>
+                    <span class="text-xs text-gray-500">เรียนรู้ เล่น และสร้างสรรค์ด้วยปัญญาประดิษฐ์ ->
+                        kku.world/ai-zero2hero</span>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center space-x-2 text-sm">
+                <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600">Level: ระดับมัธยม</span>
+                <span class="px-3 py-1 rounded-full bg-green-100 text-green-700">Status: Ready to Learn</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Sidebar (lg:col-span-3) -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Stats Chart -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">My Skills XP</h3>
+                <div class="chart-container">
+                    <canvas id="moduleChart"></canvas>
+                </div>
+                <p class="text-xs text-center text-gray-400 mt-2">สะสมทักษะให้ครบทุกด้าน!</p>
+            </div>
+
+            <!-- Prep Checklist -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-3">🎒 เช็คความพร้อมก่อนลุย</h3>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-center space-x-2">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked
+                            onclick="return false;">
+                        <span>คอมพิวเตอร์พร้อม!</span>
+                    </li>
+                    <li class="flex items-center space-x-2">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span>ล็อกอิน Google แล้ว</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-xs text-yellow-800">
+                <strong>💡 Tip:</strong> ถ้าติดขัดตรงไหน ยกมือถามอาจารย์ได้เลย ไม่ต้องกลัวผิด! การเรียนรู้คือการทดลอง
+            </div>
+
+            <div class="p-4 rounded-xl border text-xs text-gray-700 relative text-center ">
+                ผศ.ดร ไพรสันต์ ผดุงเวียง <br>วิทยาลัยการคอมพิวเตอร์ <br> มหาวิทยาลัยขอนแก่น
+
+            </div>
+        </div>
+
+        <!-- Right Content (lg:col-span-9) -->
+        <div class="lg:col-span-9 flex flex-col">
+
+            <!-- Tabs -->
+            <div
+                class="grid grid-cols-2 md:grid-cols-5 bg-white rounded-t-xl overflow-hidden shadow-sm border-b border-gray-200">
+                <button onclick="switchTab(1)" id="tab-1" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-primary">1. เริ่มต้น (Start)</span>
+                    <span class="text-[15px] uppercase text-gray-400">สอน AI ให้รู้จักโลก</span>
+                </button>
+                <button onclick="switchTab(2)" id="tab-2" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-secondary">2. ฝึกฝน (Train)</span>
+                    <span class="text-[15px] uppercase text-gray-400">สร้าง AI ของตัวเอง</span>
+                </button>
+                <button onclick="switchTab(3)" id="tab-3" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-tertiary">3. นักสืบ & ศิลปิน</span>
+                    <span class="text-[15px] uppercase text-gray-400">Deepfake & AutoDraw</span>
+                </button>
+                <button onclick="switchTab(4)" id="tab-4" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-quaternary">4. ร่ายเวทย์ (Prompt)</span>
+                    <span class="text-[15px] uppercase text-gray-400">สั่งงาน Generative AI</span>
+                </button>
+                <button onclick="switchTab(5)" id="tab-5" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-orange-600">5. Agentic AI</span>
+                    <span class="text-[15px] uppercase text-gray-400">AI ที่คิดและตัดสินใจเอง</span>
+                </button>
+            </div>
+            <!-- Dynamic Content Area -->
+            <div id="content-area"
+                class="bg-white rounded-b-xl shadow-md p-6 min-h-[600px] border border-gray-100 relative">
+                <!-- Content Injected Here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Curriculum Data (Student Facing) ---
+        const curriculum = {
+            1: {
+                title: "Topic 1: พื้นฐาน AI และ Data Bias",
+                colorClass: "text-blue-600",
+                bgClass: "bg-blue-50",
+                content: `
+                    <div class="animate-fade-in space-y-6">
+                        <!-- Warm-up -->
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
+                            <h2 class="text-xl font-bold text-blue-800 flex items-center gap-2">⚡ ภารกิจแข่งวาดรูปกับ AI (Quick Draw)</h2>
+                            <p class="text-sm text-gray-700 mt-2">
+                                มาดูกันว่า AI จะทายรูปวาดไก่เขี่ยของเราถูกไหม? มีเวลาแค่ 20 วินาทีต่อรูปเท่านั้น!
+                            </p>
+                            <div class="mt-4 flex flex-wrap items-center gap-4">
+                                <a href="https://quickdraw.withgoogle.com/" target="_blank" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transition font-bold text-sm">
+                                    1 ➜ 🚀 เข้าเล่น Quick Draw
+                                </a>
+                                <p class="text-xs text-blue-600 bg-white px-3 py-1 rounded-full border border-blue-200">
+                                    🤔 ลองสังเกต: ทำไมวาดแค่วงกลม AI ถึงรู้ว่าเป็นแอปเปิ้ล?
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Main Activity -->
+                        <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-blue-300 transition group">
+                            <div class="flex justify-between items-start">
+                                <h2 class="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition">🌊 ภารกิจกู้ชีพมหาสมุทร (AI for Oceans)</h2>
+                                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">Activity หลัก</span>
+                            </div>
+                            
+                            <p class="text-gray-600 mt-4 text-sm leading-relaxed">
+                                มหาสมุทรของเรากำลังแย่! เราต้องสวมบทบาทเป็น <strong>"ครูฝึกสอน AI"</strong> 
+                                เพื่อช่วยหุ่นยนต์เก็บขยะใต้ทะเล แต่ระวังนะ... ในทะเลไม่ได้มีแค่ปลา 
+                                แต่ยังมีสัตว์แปลกๆ อีกเพียบ AI จะงงไหมนะ?
+                            </p>
+                            
+                            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-gray-50 p-4 rounded-lg text-sm border border-gray-100">
+                                    <strong>🔑 สิ่งที่เราจะได้เรียนรู้:</strong>
+                                    <ul class="list-disc pl-4 mt-2 text-gray-600 space-y-1">
+                                        <li>AI เรียนรู้จากสิ่งที่เราสอน (Training Data)</li>
+                                        <li>ถ้าสอนผิด AI ก็จำผิด (Bias)</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-lg text-sm border border-red-100">
+                                    <strong>⚠️ คำถามชวนคิด:</strong>
+                                    <p class="text-gray-600 mt-2">"ถ้าเราสอน AI ว่าปลาคือสัตว์สีแดง เมื่อเจอวาฬสีน้ำเงิน AI จะคิดว่าเป็นขยะไหม?"</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 text-right">
+                                <a href="https://studio.code.org/s/oceans/lessons/1/levels/1" target="_blank" class="inline-flex items-center bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition shadow-lg font-bold">
+                                    2 ➜ 🚀 เริ่มภารกิจกู้ชีพมหาสมุทร
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            2: {
+                title: "Topic 2: การสร้างโมเดล (Machine Learning)",
+                colorClass: "text-green-600",
+                bgClass: "bg-green-50",
+                content: `
+                    <div class="animate-fade-in space-y-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-2xl font-bold text-green-700">🌿 Project: สร้าง AI จำแนกสมุนไพร</h2>
+                            <span class="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">Teachable Machine</span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-4">
+                            วันนี้เราจะไม่ใช่แค่ "ผู้ใช้" แต่เราจะเป็น "ผู้สร้าง" AI ด้วยตัวเอง! 
+                            มาสอนคอมพิวเตอร์ให้แยกความแตกต่างของสมุนไพรไทยกันเถอะ
+                        </p>
+
+                        <!-- Steps -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white p-5 rounded-xl border-b-4 border-green-200 hover:border-green-400 shadow-sm transition text-center group">
+                                <div class="text-4xl mb-3 group-hover:scale-110 transition">📸</div>
+                                <h3 class="font-bold text-gray-800">1. เก็บข้อมูล (Gather)</h3>
+                                <p class="text-xs text-gray-500 mt-2">เปิดกล้องหรืออัปโหลดรูปสมุนไพรทั้ง 2-3 ชนิด อย่างละ 20 รูป ขึ้นไป ให้ AI ได้เห็นตัวอย่างเยอะๆ </p>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl border-b-4 border-green-400 hover:border-green-600 shadow-sm transition text-center group">
+                                <div class="text-4xl mb-3 group-hover:scale-110 transition">🧠</div>
+                                <h3 class="font-bold text-gray-800">2. ฝึกฝน (Train)</h3>
+                                <p class="text-xs text-gray-500 mt-2">กดปุ่ม Train Model รอสักครู่... คอมพิวเตอร์กำลังแอบจำจุดสังเกตของใบไม้แต่ละแบบอยู่</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl border-b-4 border-green-600 hover:border-green-800 shadow-sm transition text-center group">
+                                <div class="text-4xl mb-3 group-hover:scale-110 transition">🎯</div>
+                                <h3 class="font-bold text-gray-800">3. ทดสอบ (Test)</h3>
+                                <p class="text-xs text-gray-500 mt-2">ลองเอารูปใบไม้ใบใหม่ หรือเอาของจริงมาส่องกล้อง ดูซิว่า AI ทายถูก 100% ไหม?</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 rounded-xl p-6 border border-green-100 flex flex-col md:flex-row items-center gap-6">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg text-green-900 mb-2">💡 Tips สำหรับนักสร้าง AI</h3>
+                                <ul class="list-disc pl-5 text-sm text-green-800 space-y-2">
+                                    <li>download ข้อมูลสมุนไพรไทยที่เตรียมไว้ให้แล้ว <strong><a href="https://storage.googleapis.com/thai_herb/ThaiHerb.zip" class="bg-green-100 border border-green-200 prompt-tag p-2 rounded hover:shadow-md hover:bg-green-200">[3 ➜ 🚀 ThaiHerb.zip]</a></strong></li>
+                                    <li><strong>Challenge:</strong> ลองหาสมุนไพรที่หน้าตาคล้ายกันมากๆ มาแกล้ง AI ดูสิ</li>
+                                    <li><strong>ถ้า AI ทายผิด:</strong> ลองเพิ่มรูปภาพมุมแปลกๆ หรือแสงที่ต่างกันเข้าไปแล้ว Train ใหม่นะ</li>
+                                </ul>
+                            </div>
+                            <a href="https://teachablemachine.withgoogle.com/" target="_blank" class="bg-green-600 text-white px-8 py-4 rounded-xl hover:bg-green-700 shadow-lg hover:shadow-xl transition font-bold text-lg whitespace-nowrap animate-bounce">
+                                4 ➜ 🚀 สร้างโมเดลเลย!
+                            </a>
+                        </div>
+                    </div>
+                `
+            },
+            3: {
+                title: "Topic 3: รู้ทัน Deepfake & สร้างสรรค์งานศิลป์",
+                colorClass: "text-pink-600",
+                bgClass: "bg-pink-50",
+                content: `
+                    <div class="animate-fade-in space-y-8">
+                        
+                        <!-- Part 1: Deepfake -->
+                        <div class="bg-white border-2 border-pink-100 rounded-xl overflow-hidden shadow-sm flex flex-col md:flex-row hover:shadow-md transition">
+                            <div class="bg-pink-50 p-6 md:w-1/3 flex flex-col justify-center items-center text-center">
+                                <div class="text-6xl mb-3">🕵️‍♀️</div>
+                                <h3 class="font-bold text-xl text-pink-700">เกมนักสืบจับเท็จ</h3>
+                                <span class="text-[10px] bg-pink-200 text-pink-800 px-2 py-1 rounded-full mt-2">Critical Thinking</span>
+                            </div>
+                            <div class="p-6 md:w-2/3">
+                                <h4 class="font-bold text-gray-800 mb-2 text-lg">ภารกิจ: หาหน้าคนจริง!</h4>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    ในโลกออนไลน์มีรูปปลอมที่ AI สร้างขึ้นเยอะมาก (Deepfake) พวกเราจะแยกออกไหม? 
+                                    ลองเข้าไปเล่นเกมจับผิดภาพดู
+                                </p>
+                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <h5 class="font-bold text-xs text-gray-500 uppercase mb-2">🔎 จุดสังเกตคนปลอม:</h5>
+                                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-700">
+                                        <span>👁️ แววตาดูแข็งๆ</span>
+                                        <span>🖼️ พื้นหลังเบี้ยวๆ</span>
+                                        <span>👂 หูสองข้างไม่เหมือนกัน</span>
+                                        <span>🦷 ฟันดูแปลกๆ /span>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <a href="https://www.whichfaceisreal.com/" target="_blank" class="inline-block bg-pink-600 text-white px-5 py-2 rounded-lg hover:bg-pink-700 transition font-bold shadow-md">
+                                        5 ➜ 🚀 เล่นเกม Which Face Is Real? 
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Part 2: AutoDraw -->
+                        <div class="bg-white border-2 border-purple-100 rounded-xl overflow-hidden shadow-sm flex flex-col md:flex-row hover:shadow-md transition">
+                            <div class="bg-purple-50 p-6 md:w-1/3 flex flex-col justify-center items-center text-center order-first md:order-last">
+                                <div class="text-6xl mb-3">🎨</div>
+                                <h3 class="font-bold text-xl text-purple-700">ปากกาเนรมิต</h3>
+                                <span class="text-[10px] bg-purple-200 text-purple-800 px-2 py-1 rounded-full mt-2">Creativity</span>
+                            </div>
+                            <div class="p-6 md:w-2/3">
+                                <h4 class="font-bold text-gray-800 mb-2 text-lg">วาดไม่สวยก็ปังได้!</h4>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    ไม่ต้องกังวลเรื่องฝีมือวาดรูป แค่ขีดเส้นมั่วๆ หรือร่างโครงร่างคร่าวๆ 
+                                    เดี๋ยว AI (AutoDraw) จะช่วยเดาใจและเปลี่ยนลายเส้นยึกยือ ให้กลายเป็นภาพกราฟิกสวยๆ ทันที
+                                </p>
+                                <ul class="list-disc pl-5 text-sm text-gray-500 mb-4 space-y-1">
+                                    <li>ลองวาด: โลโก้ประจำกลุ่ม</li>
+                                    <li>ลองวาด: การ์ดอวยพรวันเกิด</li>
+                                </ul>
+                                <a href="https://www.autodraw.com/" target="_blank" class="inline-block bg-purple-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-purple-700 transition font-bold shadow-md">
+                                   6 ➜ 🚀 เริ่มวาดด้วย AutoDraw
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                `
+            },
+            4: {
+                // Interactive Module content generated by function
+                title: "Topic 4: ห้องทดลองเวทมนตร์ (Prompt Lab)",
+                colorClass: "text-purple-600"
+            },
+            5: {
+                title: "Topic 5: Agentic AI - AI ที่คิดและทำงานเองได้",
+                colorClass: "text-orange-600",
+                bgClass: "bg-orange-50",
+                content: `
+        <div class="animate-fade-in space-y-6">
+            
+            <!-- Introduction -->
+            <div class="bg-gradient-to-r from-orange-50 to-amber-50 border-l-4 border-orange-500 p-6 rounded-r-xl">
+                <h2 class="text-2xl font-bold text-orange-800 flex items-center gap-2 mb-3">
+                    🤖 Agentic AI คืออะไร?
+                </h2>
+                <p class="text-gray-700 leading-relaxed mb-4">
+                    ถ้า AI ธรรมดาเปรียบเหมือน <strong>"เครื่องมือ"</strong> ที่รอให้เราสั่ง (เช่น ChatGPT ที่ต้องพิมพ์ prompt ทุกครั้ง) 
+                    แต่ <strong>Agentic AI</strong> เปรียบเหมือน <strong>"ผู้ช่วยอัจฉริยะ"</strong> ที่สามารถ:
+                </p>
+                <div class="grid md:grid-cols-3 gap-4 mt-4">
+                    <div class="bg-white p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-3xl mb-2">🎯</div>
+                        <strong class="text-orange-700">ตั้งเป้าหมายเอง</strong>
+                        <p class="text-xs text-gray-600 mt-2">รู้ว่าต้องทำอะไรให้สำเร็จ</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-3xl mb-2">🧭</div>
+                        <strong class="text-orange-700">วางแผนเอง</strong>
+                        <p class="text-xs text-gray-600 mt-2">แบ่งงานเป็นขั้นตอนย่อยๆ</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-3xl mb-2">⚡</div>
+                        <strong class="text-orange-700">ลงมือทำเอง</strong>
+                        <p class="text-xs text-gray-600 mt-2">ใช้เครื่องมือต่างๆ จนสำเร็จ</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analogy Section -->
+            <div class="bg-white rounded-xl border-2 border-orange-100 p-6 shadow-sm">
+                <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">💡</span>
+                    ลองเปรียบเทียบดูนะ
+                </h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🔧</span>
+                            <strong class="text-blue-700">AI แบบเดิม (Tool AI)</strong>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2">เหมือน <strong>"เครื่องคำนวณ"</strong></p>
+                        <ul class="text-xs text-gray-500 space-y-1 list-disc pl-5">
+                            <li>ถาม: "2+2 เท่ากับเท่าไร?" → ตอบ: "4"</li>
+                            <li>ต้องถามทีละคำถาม</li>
+                            <li>ไม่รู้ว่าจะถามอะไรต่อ</li>
+                        </ul>
+                    </div>
+                    <div class="bg-orange-50 p-5 rounded-lg border border-orange-300">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🤖</span>
+                            <strong class="text-orange-700">Agentic AI</strong>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2">เหมือน <strong>"ผู้ช่วยนักวิจัย"</strong></p>
+                        <ul class="text-xs text-gray-500 space-y-1 list-disc pl-5">
+                            <li>บอกว่า: "ช่วยวิจัยเรื่องพลังงานแสงอาทิตย์"</li>
+                            <li>AI จะค้นข้อมูล → สรุป → วิเคราะห์ → เขียนรายงาน</li>
+                            <li>ทำงานต่อเนื่องจนเสร็จเอง!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real World Example -->
+            <div class="border-2 border-dashed border-orange-200 rounded-xl p-6 hover:border-orange-400 transition">
+                <h3 class="font-bold text-xl text-gray-800 mb-4">🌍 ตัวอย่างจากชีวิตจริง</h3>
+                
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded-lg border-l-4 border-green-400">
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">🏥</span>
+                            <div class="flex-1">
+                                <strong class="text-green-700">ผู้ช่วยหมอ (Medical Agent)</strong>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    วิเคราะห์อาการผู้ป่วย → ค้นหาข้อมูลโรค → แนะนำแพทย์ → จองนัดหมาย → ติดตามอาการ
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg border-l-4 border-blue-400">
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">📚</span>
+                            <div class="flex-1">
+                                <strong class="text-blue-700">ครูสอนพิเศษ (Learning Agent)</strong>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    ประเมินระดับนักเรียน → สร้างโจทย์ที่เหมาะสม → ตรวจคำตอบ → อธิบายที่ผิด → ปรับความยากง่าย
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg border-l-4 border-purple-400">
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">🎮</span>
+                            <div class="flex-1">
+                                <strong class="text-purple-700">NPC ในเกม (Game Agent)</strong>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    สังเกตพฤติกรรมผู้เล่น → วางแผนกลยุทธ์ → โจมตี/ป้องกัน → ปรับยุทธวิธี → เรียนรู้จากการแพ้ชนะ
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hands-on Activity -->
+            <div class="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl p-6 shadow-lg">
+                <h3 class="font-bold text-xl mb-3 flex items-center gap-2">
+                    <span class="text-2xl">🎯</span>
+                    ภารกิจ: ออกแบบ Agentic AI ของตัวเอง!
+                </h3>
+                <p class="text-orange-50 mb-4 text-sm">
+                    ลองคิดว่าถ้าเรามี AI Agent ที่ช่วยงาน เราจะให้มันทำอะไร? ลองตอบคำถามเหล่านี้:
+                </p>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-lg">
+                        <strong class="text-sm">1️⃣ เป้าหมายคืออะไร?</strong>
+                        <p class="text-xs text-orange-100 mt-1">ตัวอย่าง: "ช่วยทำการบ้านคณิตศาสตร์"</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-lg">
+                        <strong class="text-sm">2️⃣ ต้องมีขั้นตอนอะไรบ้าง?</strong>
+                        <p class="text-xs text-orange-100 mt-1">ตัวอย่าง: อ่านโจทย์ → แก้สมการ → ตรวจคำตอบ</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-lg">
+                        <strong class="text-sm">3️⃣ ต้องใช้เครื่องมืออะไร?</strong>
+                        <p class="text-xs text-orange-100 mt-1">ตัวอย่าง: เครื่องคิดเลข, กราฟ, ตำราเรียน</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-lg">
+                        <strong class="text-sm">4️⃣ วัดความสำเร็จอย่างไร?</strong>
+                        <p class="text-xs text-orange-100 mt-1">ตัวอย่าง: คำตอบถูกต้อง 100%</p>
+                    </div>
+                </div>
+
+                <div class="bg-white/20 backdrop-blur p-4 rounded-lg">
+                    <strong class="text-sm block mb-2">💭 ท้าทายความคิดสร้างสรรค์:</strong>
+                    <p class="text-xs text-orange-50">
+                        ถ้าให้ออกแบบ "AI Agent ประจำโรงเรียน" ที่ช่วยเหลือนักเรียนทุกคน เราจะให้มันมีความสามารถอะไรบ้าง? 
+                        เขียนไอเดียลงกระดาษ หรือคุยกับเพื่อนในกลุ่ม!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Ethical Considerations -->
+            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-5">
+                <h3 class="font-bold text-lg text-red-800 mb-3 flex items-center gap-2">
+                    <span class="text-2xl">⚠️</span>
+                    สิ่งที่ต้องระวังกับ Agentic AI
+                </h3>
+                <ul class="space-y-2 text-sm text-red-900">
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg">🚫</span>
+                        <div>
+                            <strong>ปัญหาการควบคุม:</strong> ถ้า AI ตัดสินใจเอง เราจะหยุดมันได้ไหม ถ้ามันทำผิดพลาด?
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg">🎯</span>
+                        <div>
+                            <strong>เป้าหมายที่ผิด:</strong> ถ้าเราตั้งเป้าไม่ดี AI ก็จะทำสิ่งไม่ดีตาม (เช่น ให้ AI "ทำให้รวยที่สุด" มันอาจโกง!)
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg">🔐</span>
+                        <div>
+                            <strong>ความปลอดภัย:</strong> ถ้า AI เข้าถึงข้อมูลส่วนตัวเรา จะมั่นใจได้ไหมว่าจะไม่รั่วไหล?
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Try it Out Section -->
+            <div class="bg-white rounded-xl border-2 border-orange-200 p-6 shadow-sm">
+                <h3 class="font-bold text-xl text-gray-800 mb-4">ทดลอง Agentic AI จริงๆ</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    แม้ว่า Agentic AI แบบเต็มรูปแบบจะยังไม่เปิดให้ทุกคนใช้ แต่เราสามารถลองเห็นภาพคร่าวๆ ได้จากเครื่องมือเหล่านี้:
+                </p>
+                
+                <div class="grid md:grid-cols-2 gap-4"> 
+
+                <div class="mt-4 bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <strong class="text-sm text-amber-800">💡 Prompt ตัวอย่างสำหรับทดสอบ Agentic Behavior:</strong>
+                    <div class="mt-2 bg-white p-3 rounded border border-amber-300 font-mono text-xs text-gray-700">
+                        "ค้นหาข้อมูลเกี่ยวกับ 'พลังงานทดแทน'  จากนั้น </br>
+1. เขียนสรุป ไม่เกิน 500 คำ </br>
+2. สร้าง interactive web เพื่อการเรียนรู้</br>
+3. สร้างแบบทดสอบแบบหลังเรียนแบบปรนัย 4 ตัวเลือกจำนวน 10 ข้อ แบบ interactive พร้อมเฉลยและรวมคะแนน"
+                    </div>
+                    <p class="text-xs text-amber-700 mt-2">ลองสังเกตว่า AI ทำงานกี่ขั้นตอน</p>
+                </div>
+                <div class="mt-4 border border-gray-200 p-4 rounded-lg hover:shadow-md transition">
+                        <strong class="text-orange-600 flex items-center gap-2">
+                            <span class="text-2xl">💬</span>
+                            Claude (Agentic Mode)
+                        </strong>
+                        <p class="text-xs text-gray-500 mt-2">ลอง prompt ที่ให้ AI ทำงานหลายขั้นตอน</p>
+                        <a href="https://claude.ai/" target="_blank" class="inline-block mt-3 bg-orange-600 text-white text-xs px-4 py-2 rounded hover:bg-orange-700 transition">
+                           10 ➜ 🚀 ทดลองใช้ Claude
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    `
+            }
+        };
+
+        // --- Prompt Builder Logic ---
+        const promptParts = {
+            subjects: ['นักเรียนไทย', 'แมวอวกาศ', 'หุ่นยนต์บริการ', 'ทีเร็กซ์ใส่สูท', 'มังกร', 'ตัวตลกผู้เศร้าสร้อย', 'หุ่นยนต์รวน', 'ราชา', 'แวมไพร์ดิสโก้', 'คาปิบาร่าสุดชิล'],
+            actions: ['กำลังอ่านหนังสือ', 'เล่นสเก็ตบอร์ด', 'ดื่มกาแฟ', 'บินผ่านตึกสูง', 'เต้นรำ', 'กินไอติม', 'กระโดดปาร์กูร์ (Parkour)', 'นอนอืดอยู่บนโซฟา', 'ถ่ายเซลฟี่หน้ากระจก'],
+            styles: ['สไตล์ Cyberpunk', 'ภาพสีน้ำ (Watercolor)', 'ภาพพิกเซล (Pixel Art)', 'สไตล์การ์ตูนญี่ปุ่น 90s', 'สมจริงแบบ 4K', 'ภาพสเก็ตช์ดินสอ (Pencil Sketch)', 'สไตล์หนังสือการ์ตูนคอมมิค (Comic Book)'],
+            moods: ['แสงนีออน (Neon)', 'ยามพระอาทิตย์ตก (Sunset)', 'บรรยากาศลึกลับ (Mysterious)', 'สีพาสเทลสดใส (Pastel)', 'ฝนตกพรำๆ (Rainy Vibes)', 'โลกใต้น้ำ (Underwater)', 'บรรยากาศชวนฝัน (Dreamy)']
+        };
+
+        let currentPrompt = { subject: '', action: '', style: '', mood: '' };
+
+        function renderPromptBuilder() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="mb-6 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">🧪 ห้องทดลอง Prompt (Prompt Lab)</h2>
+                            <p class="text-sm text-gray-500 mt-1">"Prompt คือคาถาเวทมนตร์" ยิ่งร่ายคาถาละเอียด AI ยิ่งเสกภาพได้สวย</p>
+                        </div>
+                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">Interactive Activity</span>
+                    </div>
+
+                    <!-- Output Box -->
+                    <div class="bg-gray-900 rounded-xl p-6 mb-8 relative shadow-lg group">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"></div>
+                        <p class="text-gray-400 text-[10px] uppercase tracking-widest mb-2 font-mono">Your Prompt:</p>
+                        <div id="prompt-display" class="text-white text-lg md:text-2xl font-mono min-h-[60px] flex items-center justify-center text-center">
+                            (เลือกส่วนผสมด้านล่างเพื่อปรุงคาถา...)
+                        </div>
+                        <div class="mt-4 flex justify-center">
+                            <button onclick="copyPrompt()" class="bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-full transition flex items-center gap-2 border border-white/20 hover:scale-105 transform">
+                                8 ➜ 📋 Copy คาถาไปใช้เลย
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Builder Controls -->
+                    <p class="text-sm font-bold text-gray-600 mb-3">7 ➜ 🚀 เลือกส่วนผสมเพื่อปรุงคาถา:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        ${renderPromptColumn('1. ใคร/อะไร (Subject)', 'subjects', 'border-blue-200 bg-blue-50 text-blue-700')}
+                        ${renderPromptColumn('2. ทำอะไร (Action)', 'actions', 'border-green-200 bg-green-50 text-green-700')}
+                        ${renderPromptColumn('3. สไตล์ภาพ (Style)', 'styles', 'border-pink-200 bg-pink-50 text-pink-700')}
+                        ${renderPromptColumn('4. บรรยากาศ (Mood)', 'moods', 'border-purple-200 bg-purple-50 text-purple-700')}
+                    </div>
+
+                    <!-- Tips Section -->
+                    <div class="mt-8 bg-indigo-50 rounded-xl p-5 border border-indigo-200 text-indigo-800 text-sm flex items-start space-x-3 shadow-sm">
+                        <span class="text-2xl">✨</span>
+                        <div>
+                            <strong>9 ➜ เคล็ดลับพ่อมด AI (Prompt engineer)</strong>
+                            <p class="mt-1">"อย่าลืมก๊อปปี้ prompt ด้านบน แล้วเอาไปวางใน 
+                            <a href="https://www.bing.com/images/create" class="prompt-tag p-2 rounded hover:shadow-md hover:bg-gray-50">🚀 Bing Image Creator, 
+                            <a href="https://www.canva.com/ai-image-generator" class="prompt-tag p-2 rounded hover:shadow-md hover:bg-gray-50">🚀 Canva</a>, 
+                            <a href="https://gemini.google.com/" class="prompt-tag p-2 rounded hover:shadow-md hover:bg-gray-50">🚀 Gemini</a>,                             
+                            หรือ 
+                            <a href="https://chatgpt.com/" class="prompt-tag p-2 rounded hover:shadow-md hover:bg-gray-50">🚀 Chatgpt</a>,                             
+                             เพื่อให้ AI สร้างภาพจริงๆ ออกมาให้ดู!"</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPromptColumn(title, key, headerClass) {
+            return `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="p-3 border-b text-xs font-bold uppercase tracking-wide ${headerClass}">
+                        ${title}
+                    </div>
+                    <div class="p-3 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                        ${promptParts[key].map(item => `
+                            <div onclick="selectPart('${key}', '${item}', this)" 
+                                 class="prompt-tag text-xs bg-white border border-gray-200 p-2 rounded text-gray-600 shadow-sm hover:shadow-md hover:bg-gray-50">
+                                ${item}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectPart(key, value, el) {
+            // UI Logic
+            const container = el.parentElement;
+            Array.from(container.children).forEach(child => child.classList.remove('selected'));
+            el.classList.add('selected');
+
+            // Data Logic
+            if (key === 'subjects') currentPrompt.subject = value;
+            if (key === 'actions') currentPrompt.action = value;
+            if (key === 'styles') currentPrompt.style = `, ${value}`;
+            if (key === 'moods') currentPrompt.mood = `, ${value}`;
+
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('prompt-display');
+            const { subject, action, style, mood } = currentPrompt;
+
+            if (!subject && !action) {
+                display.innerText = "(เลือกส่วนผสมด้านล่างเพื่อปรุงคาถา...)";
+                return;
+            }
+            display.innerText = `${subject} ${action}${style}${mood}`;
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('prompt-display').innerText;
+            if (!text || text.includes('เลือกส่วนผสม')) return;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                alert('คัดลอกคาถาเรียบร้อย!\n\n"' + text + '"\n\nนำไปวางใน AI Image Generator ได้เลยจ้า');
+            } catch (err) {
+                alert('Oops! ก๊อปปี้ไม่ได้ ลองเลือกข้อความแล้วกด Ctrl+C นะ');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // --- Core Functions ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            switchTab(1);
+        });
+
+        function switchTab(id) {
+            // Handle Tab Styling
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active-1', 'active-2', 'active-3', 'active-4');
+            });
+            document.getElementById(`tab-${id}`).classList.add(`active-${id}`);
+
+            // Render Content
+            const contentDiv = document.getElementById('content-area');
+            if (id === 4) {
+                contentDiv.innerHTML = renderPromptBuilder();
+            } else {
+                contentDiv.innerHTML = curriculum[id].content;
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('moduleChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: ['เข้าใจ AI', 'สร้างโมเดล', 'จริยธรรม', 'สั่งงาน AI', 'Agentic AI'],  // เพิ่ม Agentic AI
+                    datasets: [{
+                        data: [20, 20, 20, 20, 20],  // เปลี่ยนเป็น 5 ส่วนๆ ละ 20%
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.6)',   // Blue
+                            'rgba(5, 150, 105, 0.6)',   // Green
+                            'rgba(219, 39, 119, 0.6)',  // Pink
+                            'rgba(124, 58, 237, 0.6)',  // Purple
+                            'rgba(234, 88, 12, 0.6)'    // Orange - เพิ่มบรรทัดนี้
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: { ticks: { display: false }, grid: { color: '#f3f4f6' } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 10 }, boxWidth: 10 } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
