@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>AI Student Lab: from Zero to Hero</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Chosen Palette: Comprehensive Learning -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563EB',
+                        secondary: '#059669',
+                        tertiary: '#DB2777',
+                        quaternary: '#7C3AED',
+                        quinary: '#EA580C',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            background-color: #F3F4F6;
+            color: #1F2937;
+            /* เว้นที่ให้ bottom nav บนมือถือ + safe area ของ iPhone */
+            padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        }
+
+        @media (min-width: 1024px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+
+        /* ปิด delay 300ms และ highlight สีฟ้าตอนแตะบนมือถือ */
+        button,
+        a,
+        .tap {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 220px;
+        }
+
+        .nav-item {
+            border-bottom: 4px solid transparent;
+        }
+
+        .nav-item.active-1 { color: #2563EB; border-color: #2563EB; background: #EFF6FF; }
+        .nav-item.active-2 { color: #059669; border-color: #059669; background: #ECFDF5; }
+        .nav-item.active-3 { color: #DB2777; border-color: #DB2777; background: #FDF2F8; }
+        .nav-item.active-4 { color: #7C3AED; border-color: #7C3AED; background: #F5F3FF; }
+        .nav-item.active-5 { color: #EA580C; border-color: #EA580C; background: #FFF7ED; }
+
+        /* --- Bottom nav (มือถือ) --- */
+        .tabbar-item.on-1 { color: #2563EB; background: #EFF6FF; }
+        .tabbar-item.on-2 { color: #059669; background: #ECFDF5; }
+        .tabbar-item.on-3 { color: #DB2777; background: #FDF2F8; }
+        .tabbar-item.on-4 { color: #7C3AED; background: #F5F3FF; }
+        .tabbar-item.on-5 { color: #EA580C; background: #FFF7ED; }
+
+        /* --- แถวชิปเลื่อนแนวนอน: กันไม่ให้ scroll ค้างบนมือถือ --- */
+        .chip-row {
+            display: flex;
+            gap: .5rem;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+            padding: .25rem .25rem .5rem;
+            scrollbar-width: none;
+        }
+
+        .chip-row::-webkit-scrollbar { display: none; }
+
+        .chip {
+            scroll-snap-align: start;
+            flex: 0 0 auto;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .12s, box-shadow .12s;
+        }
+
+        .chip:active { transform: scale(.95); }
+
+        .chip.selected {
+            background-color: #7C3AED;
+            color: #fff;
+            border-color: #7C3AED;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, .35);
+        }
+
+        .prompt-tag { cursor: pointer; transition: all 0.2s; user-select: none; }
+        .prompt-tag:active { transform: scale(.96); }
+
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ปุ่มภารกิจ: พื้นที่แตะอย่างน้อย 44px ตามมาตรฐานมือถือ */
+        .btn-go {
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .12s;
+        }
+
+        .btn-go:active { transform: scale(.97); }
+
+        /* กล้อง */
+        #cam-video {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            background: #111827;
+            transform: translateZ(0);
+        }
+
+        .toast {
+            animation: toastIn .25s ease-out forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(16px) scale(.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        :focus-visible {
+            outline: 3px solid #2563EB;
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                transition-duration: .001ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span class="text-xl sm:text-2xl bg-blue-100 p-1.5 sm:p-2 rounded-lg shrink-0">🚀</span>
+                <div class="min-w-0">
+                    <h1 class="text-sm sm:text-xl font-bold leading-tight text-gray-800 truncate">AI Student Lab: from
+                        Zero to Hero</h1>
+                    <span class="hidden sm:block text-xs text-gray-500">เรียนรู้ เล่น และสร้างสรรค์ด้วยปัญญาประดิษฐ์</span>
+                    <span class="sm:hidden text-[10px] text-gray-500">📱 เล่นได้ครบทุกภารกิจบนมือถือ</span>
+                </div>
+            </div>
+            <!-- XP chip: เห็นความคืบหน้าได้ตลอดโดยไม่ต้องเลื่อนหา -->
+            <button onclick="scrollToProgress()"
+                class="shrink-0 flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 rounded-full pl-3 pr-3.5 min-h-[44px] tap">
+                <span class="text-sm">⭐</span>
+                <span class="text-xs font-bold text-gray-700"><span id="xp-count">0</span>/10</span>
+            </button>
+        </div>
+        <div class="h-1 bg-gray-100">
+            <div id="xp-bar" class="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 transition-all duration-500"
+                style="width:0%"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Right Content: ขึ้นก่อนบนมือถือ ให้เจอภารกิจทันทีไม่ต้องเลื่อนผ่านกราฟ -->
+        <div class="lg:col-span-9 lg:order-2 flex flex-col">
+
+            <!-- Tabs (จอใหญ่) -->
+            <div class="hidden lg:grid grid-cols-5 bg-white rounded-t-xl overflow-hidden shadow-sm border-b border-gray-200">
+                <button onclick="switchTab(1)" id="tab-1" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-primary">1. เริ่มต้น (Start)</span>
+                    <span class="text-[13px] uppercase text-gray-400">สอน AI ให้รู้จักโลก</span>
+                </button>
+                <button onclick="switchTab(2)" id="tab-2" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-secondary">2. ฝึกฝน (Train)</span>
+                    <span class="text-[13px] uppercase text-gray-400">สร้าง AI ของตัวเอง</span>
+                </button>
+                <button onclick="switchTab(3)" id="tab-3" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-tertiary">3. นักสืบ & ศิลปิน</span>
+                    <span class="text-[13px] uppercase text-gray-400">Deepfake & AutoDraw</span>
+                </button>
+                <button onclick="switchTab(4)" id="tab-4" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-quaternary">4. ร่ายเวทย์ (Prompt)</span>
+                    <span class="text-[13px] uppercase text-gray-400">สั่งงาน Generative AI</span>
+                </button>
+                <button onclick="switchTab(5)" id="tab-5" class="nav-item py-4 text-center transition-colors group">
+                    <span class="block font-bold text-gray-700 group-hover:text-orange-600">5. Agentic AI</span>
+                    <span class="text-[13px] uppercase text-gray-400">AI ที่คิดและตัดสินใจเอง</span>
+                </button>
+            </div>
+
+            <!-- หัวข้อปัจจุบัน (มือถือ) -->
+            <div id="mobile-topic-head" class="lg:hidden bg-white rounded-t-xl px-4 py-3 border-b border-gray-100 shadow-sm">
+                <p class="text-[11px] uppercase tracking-widest text-gray-400" id="mobile-topic-eyebrow">Topic 1 / 5</p>
+                <h2 class="font-bold text-gray-800 leading-tight" id="mobile-topic-title">เริ่มต้น (Start)</h2>
+            </div>
+
+            <!-- Dynamic Content Area -->
+            <div id="content-area"
+                class="bg-white rounded-b-xl shadow-md p-4 sm:p-6 min-h-[400px] border border-gray-100 relative">
+                <!-- Content Injected Here -->
+            </div>
+
+            <!-- ปุ่มไปหัวข้อถัดไป -->
+            <button id="next-topic-btn" onclick="goNextTopic()"
+                class="btn-go mt-4 w-full lg:hidden bg-white border-2 border-gray-200 text-gray-600 font-bold rounded-xl py-3 tap">
+                หัวข้อถัดไป ➜
+            </button>
+        </div>
+
+        <!-- Left Sidebar -->
+        <div class="lg:col-span-3 lg:order-1 space-y-4 sm:space-y-6" id="progress-panel">
+            <!-- Stats Chart -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">My Skills XP</h3>
+                <div class="chart-container">
+                    <canvas id="moduleChart"></canvas>
+                </div>
+                <p class="text-xs text-center text-gray-400 mt-2">สะสมทักษะให้ครบทุกด้าน!</p>
+                <button onclick="resetProgress()"
+                    class="mt-3 w-full text-[11px] text-gray-400 hover:text-red-500 min-h-[44px] tap">↺ ล้างความคืบหน้า</button>
+            </div>
+
+            <!-- Prep Checklist -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-3">🎒 เช็คความพร้อมก่อนลุย</h3>
+                <ul class="space-y-3 text-sm text-gray-600" id="prep-list">
+                    <li class="flex items-center gap-2">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" checked
+                            onclick="return false;">
+                        <span>มือถือพร้อม (แบตเกิน 50%)</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span>ต่อ Wi-Fi แล้ว</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span>อนุญาตให้เว็บใช้กล้อง</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span>ล็อกอิน Google แล้ว</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-xs text-yellow-800">
+                <strong>💡 Tip:</strong> ถ้าติดขัดตรงไหน ยกมือถามอาจารย์ได้เลย ไม่ต้องกลัวผิด! การเรียนรู้คือการทดลอง
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 text-xs text-blue-800">
+                <strong>📱 เล่นบนมือถือ:</strong> ทุกภารกิจกดออกไปเว็บอื่นแล้ว <u>กดปุ่มย้อนกลับ</u>
+                เพื่อกลับมาหน้านี้ได้เลย ความคืบหน้าจะไม่หาย
+            </div>
+
+            <div class="p-4 rounded-xl border text-xs text-gray-700 relative text-center">
+                ผศ.ดร ไพรสันต์ ผดุงเวียง <br>วิทยาลัยการคอมพิวเตอร์ <br> มหาวิทยาลัยขอนแก่น
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Tab Bar (มือถือ) : อยู่ในระยะนิ้วโป้ง กระโดดข้ามหัวข้อได้โดยไม่ต้องเลื่อนขึ้นบนสุด -->
+    <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200"
+        style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+        <div class="grid grid-cols-5">
+            <button onclick="switchTab(1)" id="tb-1" class="tabbar-item flex flex-col items-center gap-0.5 py-2.5 tap">
+                <span class="text-xl leading-none">🌊</span>
+                <span class="text-[10px] font-bold leading-tight">เริ่มต้น</span>
+                <span class="tb-dot w-1.5 h-1.5 rounded-full bg-transparent"></span>
+            </button>
+            <button onclick="switchTab(2)" id="tb-2" class="tabbar-item flex flex-col items-center gap-0.5 py-2.5 tap">
+                <span class="text-xl leading-none">🧠</span>
+                <span class="text-[10px] font-bold leading-tight">ฝึกฝน</span>
+                <span class="tb-dot w-1.5 h-1.5 rounded-full bg-transparent"></span>
+            </button>
+            <button onclick="switchTab(3)" id="tb-3" class="tabbar-item flex flex-col items-center gap-0.5 py-2.5 tap">
+                <span class="text-xl leading-none">🕵️</span>
+                <span class="text-[10px] font-bold leading-tight">นักสืบ</span>
+                <span class="tb-dot w-1.5 h-1.5 rounded-full bg-transparent"></span>
+            </button>
+            <button onclick="switchTab(4)" id="tb-4" class="tabbar-item flex flex-col items-center gap-0.5 py-2.5 tap">
+                <span class="text-xl leading-none">🪄</span>
+                <span class="text-[10px] font-bold leading-tight">ร่ายเวทย์</span>
+                <span class="tb-dot w-1.5 h-1.5 rounded-full bg-transparent"></span>
+            </button>
+            <button onclick="switchTab(5)" id="tb-5" class="tabbar-item flex flex-col items-center gap-0.5 py-2.5 tap">
+                <span class="text-xl leading-none">🤖</span>
+                <span class="text-[10px] font-bold leading-tight">Agent</span>
+                <span class="tb-dot w-1.5 h-1.5 rounded-full bg-transparent"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Toast host -->
+    <div id="toast-host" class="fixed inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
+        style="bottom: calc(84px + env(safe-area-inset-bottom, 0px));"></div>
+
+    <script>
+        // =====================================================================
+        //  0) ที่เก็บความคืบหน้า
+        //     บนมือถือผู้เรียนจะสลับออกไปแอปอื่นบ่อยมาก ถ้าไม่เก็บสถานะไว้
+        //     กลับมาแล้วภารกิจจะรีเซ็ตทั้งหมด  ใช้ try/catch เพราะบางเบราว์เซอร์
+        //     (โหมดส่วนตัว / iframe) จะโยน error เมื่อแตะ localStorage
+        // =====================================================================
+        const store = (() => {
+            let mem = {};
+            let ok = false;
+            try {
+                localStorage.setItem('__t', '1');
+                localStorage.removeItem('__t');
+                ok = true;
+            } catch (e) { ok = false; }
+            return {
+                get(k) {
+                    try { return ok ? localStorage.getItem(k) : (mem[k] ?? null); }
+                    catch (e) { return mem[k] ?? null; }
+                },
+                set(k, v) {
+                    try { if (ok) localStorage.setItem(k, v); else mem[k] = v; }
+                    catch (e) { mem[k] = v; }
+                }
+            };
+        })();
+
+        // =====================================================================
+        //  1) ระบบภารกิจ  (คงลำดับ 1→10 ของเวิร์กช็อปเดิมไว้)
+        // =====================================================================
+        const MISSIONS = {
+            1: { topic: 1, name: 'Quick Draw', color: 'blue' },
+            2: { topic: 1, name: 'AI for Oceans', color: 'green' },
+            3: { topic: 2, name: 'เก็บตัวอย่างให้ AI', color: 'green' },
+            4: { topic: 2, name: 'ทดสอบโมเดลของตัวเอง', color: 'green' },
+            5: { topic: 3, name: 'Which Face Is Real', color: 'pink' },
+            6: { topic: 3, name: 'AutoDraw', color: 'purple' },
+            7: { topic: 4, name: 'ปรุงคาถา Prompt', color: 'purple' },
+            8: { topic: 4, name: 'Copy คาถา', color: 'purple' },
+            9: { topic: 4, name: 'สร้างภาพด้วย AI', color: 'purple' },
+            10: { topic: 5, name: 'ลอง Agentic AI', color: 'orange' },
+        };
+
+        let done = {};
+        try { done = JSON.parse(store.get('z2h_done') || '{}') || {}; } catch (e) { done = {}; }
+
+        let currentTab = 1;
+        let pendingMission = null;
+
+        function saveDone() { store.set('z2h_done', JSON.stringify(done)); }
+
+        function completeMission(id, silent) {
+            id = String(id);
+            if (done[id]) return;
+            done[id] = true;
+            saveDone();
+            refreshProgress();
+            // อัปเดตเฉพาะปุ่มภารกิจ ไม่ re-render ทั้งแท็บ
+            // (ถ้า re-render ตอนอยู่แท็บ 2 กล้องที่เปิดอยู่จะถูกทำลายกลางคัน
+            //  และตอนอยู่แท็บ 4 ชิปที่เลือกไว้กับตำแหน่ง scroll จะเด้งกลับ)
+            refreshMissionButtons();
+            if (!silent) {
+                const total = Object.keys(done).length;
+                toast(total >= 10
+                    ? '🏆 ครบ 10 ภารกิจ! คุณคือ AI Hero แล้ว'
+                    : `✅ ภารกิจ ${id} สำเร็จ! (${total}/10)`);
+            }
+        }
+
+        function xpTotal() { return Object.keys(done).filter(k => done[k]).length; }
+
+        function refreshProgress() {
+            const n = xpTotal();
+            const el = document.getElementById('xp-count');
+            if (el) el.textContent = n;
+            const bar = document.getElementById('xp-bar');
+            if (bar) bar.style.width = (n / 10 * 100) + '%';
+
+            // จุดบน bottom nav บอกว่าหัวข้อไหนเก็บครบแล้ว
+            for (let t = 1; t <= 5; t++) {
+                const ids = Object.keys(MISSIONS).filter(m => MISSIONS[m].topic === t);
+                const finished = ids.every(m => done[m]);
+                const btn = document.getElementById('tb-' + t);
+                if (!btn) continue;
+                const dot = btn.querySelector('.tb-dot');
+                if (dot) dot.className = 'tb-dot w-1.5 h-1.5 rounded-full ' + (finished ? 'bg-green-500' : 'bg-transparent');
+            }
+            updateChart();
+        }
+
+        // ปุ่ม "ทำเสร็จแล้ว" ประจำภารกิจ
+        function missionBtn(id) {
+            const color = (MISSIONS[id] || {}).color;
+            const isDone = !!done[String(id)];
+            const palette = {
+                blue: 'border-blue-500 text-blue-600', green: 'border-green-600 text-green-700',
+                pink: 'border-pink-500 text-pink-600', purple: 'border-purple-500 text-purple-600',
+                orange: 'border-orange-500 text-orange-600'
+            }[color] || 'border-gray-400 text-gray-600';
+            if (isDone) {
+                return `<span id="mb-${id}" class="btn-go w-full sm:w-auto gap-2 bg-green-50 border-2 border-green-500 text-green-700 font-bold rounded-xl px-4 text-sm">✓ ทำแล้ว</span>`;
+            }
+            return `<button id="mb-${id}" onclick="completeMission(${id})"
+                        class="btn-go w-full sm:w-auto gap-2 bg-white border-2 border-dashed ${palette} font-bold rounded-xl px-4 text-sm tap">
+                        ○ ทำเสร็จแล้ว กดตรงนี้
+                    </button>`;
+        }
+
+        function refreshMissionButtons() {
+            Object.keys(MISSIONS).forEach(id => {
+                const el = document.getElementById('mb-' + id);
+                if (el) el.outerHTML = missionBtn(id);
+            });
+        }
+
+        // ลิงก์ออกนอกเว็บ: จำไว้ว่ากำลังทำภารกิจไหน พอกลับมาจะถามให้ติ๊ก
+        function goMission(id) {
+            pendingMission = String(id);
+            store.set('z2h_pending', pendingMission);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            const p = pendingMission || store.get('z2h_pending');
+            if (!p || done[p]) return;
+            pendingMission = null;
+            store.set('z2h_pending', '');
+            const m = MISSIONS[p];
+            if (!m) return;
+            toast(`กลับมาแล้ว! ทำ "${m.name}" สำเร็จไหม?`, {
+                actionLabel: 'สำเร็จ ✓',
+                onAction: () => completeMission(p)
+            });
+        });
+
+        // =====================================================================
+        //  2) Toast  (แทน alert() ซึ่งบนมือถือจะเด้งบังหน้าจอและกดยาก)
+        // =====================================================================
+        function toast(msg, opts) {
+            opts = opts || {};
+            const host = document.getElementById('toast-host');
+            const el = document.createElement('div');
+            el.className = 'toast pointer-events-auto max-w-md w-full bg-gray-900 text-white text-sm rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3';
+            el.innerHTML = `<span class="flex-1 leading-snug">${msg}</span>`;
+            if (opts.actionLabel) {
+                const b = document.createElement('button');
+                b.className = 'shrink-0 bg-white text-gray-900 font-bold text-xs rounded-full px-3 py-2 tap';
+                b.textContent = opts.actionLabel;
+                b.onclick = () => { try { opts.onAction && opts.onAction(); } finally { el.remove(); } };
+                el.appendChild(b);
+            }
+            host.appendChild(el);
+            setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); },
+                opts.actionLabel ? 8000 : 3000);
+        }
+
+        function scrollToProgress() {
+            document.getElementById('progress-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // =====================================================================
+        //  3) เนื้อหาแต่ละหัวข้อ
+        // =====================================================================
+        const TOPIC_META = {
+            1: { short: 'เริ่มต้น (Start)', title: 'Topic 1: พื้นฐาน AI และ Data Bias' },
+            2: { short: 'ฝึกฝน (Train)', title: 'Topic 2: การสร้างโมเดล (Machine Learning)' },
+            3: { short: 'นักสืบ & ศิลปิน', title: 'Topic 3: รู้ทัน Deepfake & สร้างสรรค์งานศิลป์' },
+            4: { short: 'ร่ายเวทย์ (Prompt)', title: 'Topic 4: ห้องทดลองเวทมนตร์ (Prompt Lab)' },
+            5: { short: 'Agentic AI', title: 'Topic 5: AI ที่คิดและทำงานเองได้' },
+        };
+
+        function renderTopic1() {
+            return `
+            <div class="animate-fade-in space-y-5">
+                <!-- Warm-up -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 sm:p-5 rounded-r-lg">
+                    <h2 class="text-lg sm:text-xl font-bold text-blue-800 flex items-center gap-2">⚡ ภารกิจแข่งวาดรูปกับ AI (Quick Draw)</h2>
+                    <p class="text-sm text-gray-700 mt-2">
+                        มาดูกันว่า AI จะทายรูปวาดไก่เขี่ยของเราถูกไหม? มีเวลาแค่ 20 วินาทีต่อรูปเท่านั้น!
+                    </p>
+                    <p class="text-xs text-blue-700 bg-white px-3 py-2 rounded-lg border border-blue-200 mt-3">
+                        📱 บนมือถือ <strong>ใช้นิ้ววาดได้เลย</strong> ง่ายกว่าเมาส์อีก
+                    </p>
+                    <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                        <a href="https://quickdraw.withgoogle.com/" target="_blank" rel="noopener" onclick="goMission(1)"
+                            class="btn-go flex-1 bg-blue-600 text-white px-5 rounded-xl shadow-md font-bold text-sm tap">
+                            1 ➜ 🚀 เข้าเล่น Quick Draw
+                        </a>
+                        ${missionBtn(1)}
+                    </div>
+                    <p class="text-xs text-blue-600 mt-3">🤔 ลองสังเกต: ทำไมวาดแค่วงกลม AI ถึงรู้ว่าเป็นแอปเปิ้ล?</p>
+                </div>
+
+                <!-- Main Activity -->
+                <div class="border-2 border-dashed border-gray-200 rounded-xl p-4 sm:p-6">
+                    <div class="flex justify-between items-start gap-3">
+                        <h2 class="text-lg sm:text-xl font-bold text-gray-800">🌊 ภารกิจกู้ชีพมหาสมุทร (AI for Oceans)</h2>
+                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded shrink-0">Activity หลัก</span>
+                    </div>
+
+                    <p class="text-gray-600 mt-3 text-sm leading-relaxed">
+                        มหาสมุทรของเรากำลังแย่! เราต้องสวมบทบาทเป็น <strong>"ครูฝึกสอน AI"</strong>
+                        เพื่อช่วยหุ่นยนต์เก็บขยะใต้ทะเล แต่ระวังนะ... ในทะเลไม่ได้มีแค่ปลา
+                        แต่ยังมีสัตว์แปลกๆ อีกเพียบ AI จะงงไหมนะ?
+                    </p>
+
+                    <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+                        📱 <strong>หมุนจอเป็นแนวนอน</strong> ก่อนเล่น เกมนี้จอกว้างแล้วกดปลาง่ายกว่ามาก
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="bg-gray-50 p-4 rounded-lg text-sm border border-gray-100">
+                            <strong>🔑 สิ่งที่เราจะได้เรียนรู้:</strong>
+                            <ul class="list-disc pl-4 mt-2 text-gray-600 space-y-1">
+                                <li>AI เรียนรู้จากสิ่งที่เราสอน (Training Data)</li>
+                                <li>ถ้าสอนผิด AI ก็จำผิด (Bias)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg text-sm border border-red-100">
+                            <strong>⚠️ คำถามชวนคิด:</strong>
+                            <p class="text-gray-600 mt-2">"ถ้าเราสอน AI ว่าปลาคือสัตว์สีแดง เมื่อเจอวาฬสีน้ำเงิน AI จะคิดว่าเป็นขยะไหม?"</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex flex-col sm:flex-row gap-2">
+                        <a href="https://studio.code.org/s/oceans/lessons/1/levels/1" target="_blank" rel="noopener" onclick="goMission(2)"
+                            class="btn-go flex-1 bg-green-600 text-white px-6 rounded-xl shadow-lg font-bold tap">
+                            2 ➜ 🚀 เริ่มภารกิจกู้ชีพมหาสมุทร
+                        </a>
+                        ${missionBtn(2)}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderTopic3() {
+            return `
+            <div class="animate-fade-in space-y-6">
+
+                <!-- Part 1: Deepfake -->
+                <div class="bg-white border-2 border-pink-100 rounded-xl overflow-hidden shadow-sm">
+                    <div class="bg-pink-50 p-4 flex items-center gap-3">
+                        <div class="text-4xl">🕵️‍♀️</div>
+                        <div>
+                            <h3 class="font-bold text-lg text-pink-700 leading-tight">เกมนักสืบจับเท็จ</h3>
+                            <span class="text-[10px] bg-pink-200 text-pink-800 px-2 py-0.5 rounded-full">Critical Thinking</span>
+                        </div>
+                    </div>
+                    <div class="p-4 sm:p-6">
+                        <h4 class="font-bold text-gray-800 mb-2">ภารกิจ: หาหน้าคนจริง!</h4>
+                        <p class="text-sm text-gray-600 mb-4">
+                            ในโลกออนไลน์มีรูปปลอมที่ AI สร้างขึ้นเยอะมาก (Deepfake) พวกเราจะแยกออกไหม?
+                            ลองเข้าไปเล่นเกมจับผิดภาพดู
+                        </p>
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <h5 class="font-bold text-xs text-gray-500 uppercase mb-2">🔎 จุดสังเกตคนปลอม:</h5>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-700">
+                                <span>👁️ แววตาดูแข็งๆ</span>
+                                <span>🖼️ พื้นหลังเบี้ยวๆ</span>
+                                <span>👂 หูสองข้างไม่เหมือนกัน</span>
+                                <span>🦷 ฟันดูแปลกๆ</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 bg-pink-50 border border-pink-200 rounded-lg p-3 text-xs text-pink-900">
+                            📱 รูปจะเล็กบนมือถือ — <strong>ใช้สองนิ้วซูมเข้าไปดูตา หู และฟัน</strong> จะจับผิดง่ายขึ้นเยอะ
+                        </div>
+                        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                            <a href="https://www.whichfaceisreal.com/" target="_blank" rel="noopener" onclick="goMission(5)"
+                                class="btn-go flex-1 bg-pink-600 text-white px-5 rounded-xl font-bold shadow-md tap">
+                                5 ➜ 🚀 เล่นเกม Which Face Is Real?
+                            </a>
+                            ${missionBtn(5)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part 2: AutoDraw -->
+                <div class="bg-white border-2 border-purple-100 rounded-xl overflow-hidden shadow-sm">
+                    <div class="bg-purple-50 p-4 flex items-center gap-3">
+                        <div class="text-4xl">🎨</div>
+                        <div>
+                            <h3 class="font-bold text-lg text-purple-700 leading-tight">ปากกาเนรมิต</h3>
+                            <span class="text-[10px] bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full">Creativity</span>
+                        </div>
+                    </div>
+                    <div class="p-4 sm:p-6">
+                        <h4 class="font-bold text-gray-800 mb-2">วาดไม่สวยก็ปังได้!</h4>
+                        <p class="text-sm text-gray-600 mb-4">
+                            ไม่ต้องกังวลเรื่องฝีมือวาดรูป แค่ขีดเส้นมั่วๆ หรือร่างโครงร่างคร่าวๆ
+                            เดี๋ยว AI (AutoDraw) จะช่วยเดาใจและเปลี่ยนลายเส้นยึกยือ ให้กลายเป็นภาพกราฟิกสวยๆ ทันที
+                        </p>
+                        <ul class="list-disc pl-5 text-sm text-gray-500 mb-4 space-y-1">
+                            <li>ลองวาด: โลโก้ประจำกลุ่ม</li>
+                            <li>ลองวาด: การ์ดอวยพรวันเกิด</li>
+                        </ul>
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-900 mb-4">
+                            📱 <strong>วาดด้วยนิ้วได้เลย</strong> — แถบคำทายของ AI จะอยู่ด้านบนสุด เลื่อนดูได้
+                            เสร็จแล้วกดเมนู <strong>Download</strong> เพื่อเซฟรูปลงมือถือ
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <a href="https://www.autodraw.com/" target="_blank" rel="noopener" onclick="goMission(6)"
+                                class="btn-go flex-1 bg-purple-600 text-white px-5 rounded-xl text-sm font-bold shadow-md tap">
+                                6 ➜ 🚀 เริ่มวาดด้วย AutoDraw
+                            </a>
+                            ${missionBtn(6)}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderTopic5() {
+            return `
+        <div class="animate-fade-in space-y-5">
+
+            <!-- Introduction -->
+            <div class="bg-gradient-to-r from-orange-50 to-amber-50 border-l-4 border-orange-500 p-4 sm:p-6 rounded-r-xl">
+                <h2 class="text-xl sm:text-2xl font-bold text-orange-800 flex items-center gap-2 mb-3">
+                    🤖 Agentic AI คืออะไร?
+                </h2>
+                <p class="text-gray-700 leading-relaxed mb-4 text-sm sm:text-base">
+                    ถ้า AI ธรรมดาเปรียบเหมือน <strong>"เครื่องมือ"</strong> ที่รอให้เราสั่ง (เช่น ChatGPT ที่ต้องพิมพ์ prompt ทุกครั้ง)
+                    แต่ <strong>Agentic AI</strong> เปรียบเหมือน <strong>"ผู้ช่วยอัจฉริยะ"</strong> ที่สามารถ:
+                </p>
+                <div class="grid grid-cols-3 gap-2 sm:gap-4 mt-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">🎯</div>
+                        <strong class="text-orange-700 text-xs sm:text-base">ตั้งเป้าหมายเอง</strong>
+                        <p class="text-[10px] sm:text-xs text-gray-600 mt-1">รู้ว่าต้องทำอะไรให้สำเร็จ</p>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">🧭</div>
+                        <strong class="text-orange-700 text-xs sm:text-base">วางแผนเอง</strong>
+                        <p class="text-[10px] sm:text-xs text-gray-600 mt-1">แบ่งงานเป็นขั้นตอนย่อยๆ</p>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-orange-200 text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">⚡</div>
+                        <strong class="text-orange-700 text-xs sm:text-base">ลงมือทำเอง</strong>
+                        <p class="text-[10px] sm:text-xs text-gray-600 mt-1">ใช้เครื่องมือต่างๆ จนสำเร็จ</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explanation -->
+            <div class="bg-orange-50 p-4 rounded-xl border border-orange-200 text-sm">
+                <h4 class="font-bold text-orange-900 mb-1">💡 ความแตกต่างคืออะไร?</h4>
+                <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                    <li><strong>ChatGPT (GenAI):</strong> จะแค่ "เขียนแผนเที่ยว" ให้เราอ่าน (เราต้องไปจองเอง)</li>
+                    <li><strong>Agentic AI:</strong> จะ "เขียนแผน" + "เข้าเว็บจองตั๋ว" + "ส่งอีเมล" ให้เราจริงๆ (อัตโนมัติ)</li>
+                </ul>
+            </div>
+
+            <!-- Simulator -->
+            <div class="bg-gray-900 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden text-white">
+                <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl">⚙️</div>
+
+                <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4 gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-3 h-3 rounded-full bg-red-500 shrink-0"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500 shrink-0"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500 shrink-0"></div>
+                        <span class="ml-1 font-mono text-[10px] sm:text-sm text-gray-400 truncate">Agent_Workflow_Simulator</span>
+                    </div>
+                    <div class="font-mono text-[10px] sm:text-xs text-green-400 shrink-0">STATUS: READY</div>
+                </div>
+
+                <div class="mb-5">
+                    <label class="text-[10px] text-gray-400 uppercase tracking-widest">User Goal (ภารกิจ):</label>
+                    <div class="bg-gray-800 p-3 rounded-lg mt-2 border border-gray-700 font-mono text-xs sm:text-sm text-orange-300 leading-relaxed">
+                        "ช่วยวางแผนเที่ยวเชียงใหม่ 3 วัน จองตั๋วเครื่องบิน และส่งอีเมลบอกเพื่อนให้หน่อย"
+                    </div>
+                </div>
+
+                <div class="space-y-3" id="agent-process">
+                    <p class="text-xs text-gray-500 text-center">--- เลือกเครื่องมือให้ AI อย่างน้อย 2 อย่าง ---</p>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-700">
+                    <p class="text-xs text-gray-400 mb-3">เลือกเครื่องมือ (Tools) ที่จำเป็นสำหรับภารกิจนี้:</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="activateTool(this, 'search')" class="tool-btn btn-go bg-gray-800 border border-gray-600 px-3 rounded-lg text-xs tap">🔍 Google Search</button>
+                        <button onclick="activateTool(this, 'calendar')" class="tool-btn btn-go bg-gray-800 border border-gray-600 px-3 rounded-lg text-xs tap">📅 Calendar</button>
+                        <button onclick="activateTool(this, 'booking')" class="tool-btn btn-go bg-gray-800 border border-gray-600 px-3 rounded-lg text-xs tap">✈️ Flight Booking</button>
+                        <button onclick="activateTool(this, 'email')" class="tool-btn btn-go bg-gray-800 border border-gray-600 px-3 rounded-lg text-xs tap">📧 Email Sender</button>
+                        <button onclick="activateTool(this, 'paint')" class="tool-btn btn-go bg-gray-800 border border-gray-600 px-3 rounded-lg text-xs opacity-50 col-span-2 tap">🎨 Paint (ไม่จำเป็น)</button>
+                    </div>
+                </div>
+
+                <button onclick="runAgent()" id="run-btn"
+                    class="btn-go mt-5 w-full bg-orange-600 text-white font-bold py-3 rounded-lg opacity-50 cursor-not-allowed" disabled>
+                    ▶ Run Agent Workflow
+                </button>
+            </div>
+
+            <!-- Ethical Considerations -->
+            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 sm:p-5">
+                <h3 class="font-bold text-lg text-red-800 mb-3 flex items-center gap-2">
+                    <span class="text-2xl">⚠️</span> สิ่งที่ต้องระวังกับ Agentic AI
+                </h3>
+                <ul class="space-y-2 text-sm text-red-900">
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg shrink-0">🚫</span>
+                        <div><strong>ปัญหาการควบคุม:</strong> ถ้า AI ตัดสินใจเอง เราจะหยุดมันได้ไหม ถ้ามันทำผิดพลาด?</div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg shrink-0">🎯</span>
+                        <div><strong>เป้าหมายที่ผิด:</strong> ถ้าเราตั้งเป้าไม่ดี AI ก็จะทำสิ่งไม่ดีตาม (เช่น ให้ AI "ทำให้รวยที่สุด" มันอาจโกง!)</div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-lg shrink-0">🔐</span>
+                        <div><strong>ความปลอดภัย:</strong> ถ้า AI เข้าถึงข้อมูลส่วนตัวเรา จะมั่นใจได้ไหมว่าจะไม่รั่วไหล?</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Try it Out -->
+            <div class="bg-white rounded-xl border-2 border-orange-200 p-4 sm:p-6 shadow-sm">
+                <h3 class="font-bold text-lg sm:text-xl text-gray-800 mb-3">ทดลอง Agentic AI จริงๆ</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    ลองสั่งงานที่ต้องทำหลายขั้นตอนต่อเนื่องกัน แล้วสังเกตว่า AI แบ่งงานเป็นกี่ขั้น
+                </p>
+
+                <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <strong class="text-sm text-amber-800">💡 Prompt ตัวอย่าง (แตะเพื่อ copy):</strong>
+                    <div id="agent-prompt" onclick="copyAgentPrompt()"
+                        class="mt-2 bg-white p-3 rounded border border-amber-300 font-mono text-[11px] sm:text-xs text-gray-700 leading-relaxed tap active:bg-amber-100">ค้นหาข้อมูลเกี่ยวกับ 'พลังงานทดแทน' จากนั้น
+1. เขียนสรุป ไม่เกิน 500 คำ
+2. สร้าง interactive web เพื่อการเรียนรู้
+3. สร้างแบบทดสอบหลังเรียนแบบปรนัย 4 ตัวเลือก จำนวน 10 ข้อ แบบ interactive พร้อมเฉลยและรวมคะแนน</div>
+                    <button onclick="copyAgentPrompt()"
+                        class="btn-go mt-3 w-full bg-amber-500 text-white text-xs font-bold rounded-lg tap">📋 Copy prompt นี้</button>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <a href="https://claude.ai/" target="_blank" rel="noopener" onclick="goMission(10)"
+                        class="btn-go bg-orange-600 text-white rounded-xl font-bold text-sm tap">💬 10 ➜ 🚀 ทดลองใช้ Claude</a>
+                    <a href="https://gemini.google.com/" target="_blank" rel="noopener" onclick="goMission(10)"
+                        class="btn-go bg-white border-2 border-orange-300 text-orange-700 rounded-xl font-bold text-sm tap">✨ หรือลองใน Gemini</a>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-3">📱 ทั้งสองตัวมีแอปบนมือถือ ถ้าติดตั้งไว้แล้วลิงก์จะเปิดในแอปให้เลย</p>
+                <div class="mt-4">${missionBtn(10)}</div>
+            </div>
+        </div>`;
+        }
+
+        // =====================================================================
+        //  4) TOPIC 2 — AI Lab บนมือถือ
+        //
+        //  ทำไมไม่ใช้ Teachable Machine เหมือนเดิม:
+        //  หน้า /train ของ Teachable Machine บล็อกอุปกรณ์มือถือโดยตรง
+        //  (ขึ้นข้อความ "Sorry... Teachable Machine isn't supported here")
+        //  และเส้นทางเดิม (โหลด ThaiHerb.zip → แตกไฟล์ → อัปโหลด) ทำบนมือถือแทบไม่ได้
+        //
+        //  จึงย้ายมาเทรนในหน้านี้เลย: MobileNet (feature extractor) + KNN
+        //  ทำงานบนเครื่องผู้เรียน 100% รูปไม่ถูกส่งออกไปไหน และเทรนเสร็จทันที
+        // =====================================================================
+        const TFJS_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
+        const KNN_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.6/dist/knn-classifier.min.js';
+        const MOBILENET_URL = 'https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.50_224/model.json';
+
+        let featureModel = null;
+        let classifier = null;
+        let camStream = null;
+        let predictTimer = null;
+        let aiPromise = null;
+
+        // สถานะคลาสอยู่นอกฟังก์ชัน render เพื่อให้สลับแท็บแล้วตัวอย่างที่เก็บไว้ไม่หาย
+        let labels = [
+            { id: 'A', name: 'ของอย่างที่ 1', count: 0, color: '#059669' },
+            { id: 'B', name: 'ของอย่างที่ 2', count: 0, color: '#2563EB' },
+        ];
+        let activeLabel = 'A';
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.async = true;
+                s.onload = resolve;
+                s.onerror = () => reject(new Error('โหลดไฟล์ไม่สำเร็จ กรุณาเช็คอินเทอร์เน็ต'));
+                document.head.appendChild(s);
+            });
+        }
+
+        function setLabStatus(msg, tone) {
+            const el = document.getElementById('lab-status');
+            if (!el) return;
+            const c = { err: 'text-red-600', ok: 'text-green-700', busy: 'text-gray-500' }[tone] || 'text-gray-500';
+            el.className = 'text-xs ' + c;
+            el.innerHTML = msg;
+        }
+
+        async function _loadAI() {
+            setLabStatus('⏳ กำลังโหลดเครื่องมือ AI...', 'busy');
+            if (!window.tf) await loadScript(TFJS_URL);
+            if (!window.knnClassifier) await loadScript(KNN_URL);
+
+            setLabStatus('⏳ กำลังโหลดสมองของ AI (MobileNet ~5 MB) ครั้งแรกอาจรอสักครู่...', 'busy');
+            const full = await tf.loadLayersModel(MOBILENET_URL);
+            // ตัดหัว classifier ของ ImageNet ออก เหลือแค่ส่วนที่ "มอง" ภาพเป็นตัวเลข
+            featureModel = tf.model({ inputs: full.inputs, outputs: full.getLayer('conv_preds').output });
+            tf.tidy(() => featureModel.predict(tf.zeros([1, 224, 224, 3]))); // warm-up
+            classifier = knnClassifier.create();
+            setLabStatus('✅ AI พร้อมแล้ว!', 'ok');
+        }
+
+        // ใช้ promise เดียวร่วมกัน กันกรณีกดปุ่มรัวๆ แล้วโหลดโมเดลซ้อนกันหลายรอบ
+        function ensureAI() {
+            if (featureModel && classifier) return Promise.resolve();
+            if (!aiPromise) {
+                aiPromise = _loadAI().catch(e => {
+                    aiPromise = null; // ให้ลองใหม่ได้
+                    setLabStatus('❌ ' + e.message + ' — แตะเพื่อลองใหม่', 'err');
+                    throw e;
+                });
+            }
+            return aiPromise;
+        }
+
+        function embed(src) {
+            return tf.tidy(() => {
+                const px = tf.browser.fromPixels(src);
+                const resized = tf.image.resizeBilinear(px, [224, 224]).toFloat();
+                const norm = resized.div(127.5).sub(1); // MobileNet v1 ต้องการช่วง [-1, 1]
+                return featureModel.predict(norm.expandDims(0));
+            });
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('cam-video');
+            if (!video) return;
+
+            if (!window.isSecureContext) {
+                setLabStatus('❌ กล้องใช้ได้เฉพาะเว็บที่เป็น https:// — ใช้ปุ่ม "เลือกรูป" แทนได้', 'err');
+                return;
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setLabStatus('❌ เบราว์เซอร์นี้เปิดกล้องไม่ได้ — ใช้ปุ่ม "เลือกรูป" แทน', 'err');
+                return;
+            }
+
+            try { await ensureAI(); } catch (e) { return; } // ensureAI แสดง error ของตัวเองแล้ว
+
+            try {
+                setLabStatus('⏳ กำลังเปิดกล้อง...', 'busy');
+                camStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                video.srcObject = camStream;
+                video.setAttribute('playsinline', ''); // iOS: ห้ามเด้งเป็น fullscreen
+                video.muted = true;
+                await video.play();
+                document.getElementById('cam-placeholder').classList.add('hidden');
+                document.getElementById('cam-open-btn').classList.add('hidden');
+                document.getElementById('capture-zone').classList.remove('hidden');
+                setLabStatus('✅ กล้องพร้อม! เล็งไปที่ของ แล้วกดค้างปุ่มเก็บภาพ', 'ok');
+                startPredictLoop();
+            } catch (e) {
+                const msg = (e && e.name === 'NotAllowedError')
+                    ? 'ไม่ได้รับอนุญาตให้ใช้กล้อง — กดไอคอน 🔒 ที่แถบที่อยู่เว็บ แล้วเปิดสิทธิ์กล้อง หรือใช้ปุ่ม "เลือกรูป" แทน'
+                    : 'เปิดกล้องไม่ได้ — ใช้ปุ่ม "เลือกรูป" แทนได้เลย';
+                setLabStatus('❌ ' + msg, 'err');
+            }
+        }
+
+        function stopCamera() {
+            if (predictTimer) { clearInterval(predictTimer); predictTimer = null; }
+            if (camStream) {
+                camStream.getTracks().forEach(t => t.stop()); // ถ้าไม่ปิด ไฟกล้องจะค้างและกินแบต
+                camStream = null;
+            }
+        }
+
+        // เก็บตัวอย่างแบบกดค้าง (rapid capture) — ท่ามาตรฐานของ Teachable Machine
+        let capturing = false;
+
+        const MAX_PER_CLASS = 120;
+
+        async function holdStart(ev) {
+            if (ev && ev.preventDefault) ev.preventDefault();
+            if (capturing) return; // กันไม่ให้ลูปซ้อนกัน
+            if (!featureModel || !camStream) return;
+            capturing = true;
+            const video = document.getElementById('cam-video');
+            const btn = document.getElementById('hold-btn');
+            if (btn) btn.classList.add('animate-pulse');
+            try {
+                while (capturing) {
+                    const L = labels.find(l => l.id === activeLabel);
+                    if (L && L.count >= MAX_PER_CLASS) {
+                        setLabStatus('พอแล้ว! คลาสนี้มีตัวอย่างเยอะมากแล้ว ลองสลับไปอีกคลาสดู', 'ok');
+                        break;
+                    }
+                    await addSampleFrom(video); // เก็บเร็วเท่าที่เครื่องไหว ไม่ใช่ตามเวลาตายตัว
+                    await tf.nextFrame();       // คืนคิวให้เบราว์เซอร์วาดจอ ปุ่มจะไม่หนืด
+                }
+            } finally {
+                capturing = false;
+                if (btn) btn.classList.remove('animate-pulse');
+            }
+        }
+
+        function holdEnd() { capturing = false; }
+
+        async function addSampleFrom(src) {
+            if (!featureModel || !classifier) return;
+            let f = null;
+            try {
+                f = embed(src);
+                // รอให้ GPU คำนวณเฟรมนี้เสร็จจริงก่อนไปเฟรมถัดไป
+                // ถ้าไม่รอ เครื่องช้าจะมีงานค้างสะสมจนภาพหน่วงและคำทายไม่ขึ้น
+                await f.data();
+                classifier.addExample(f, activeLabel);
+                const L = labels.find(l => l.id === activeLabel);
+                if (L) L.count++;
+                updateLabelCounts();
+                if (totalSamples() >= 10) completeMission(3, true);
+            } catch (e) {
+                // เฟรมเสียหนึ่งเฟรมไม่ควรทำให้การเก็บภาพหยุดทั้งหมด
+            } finally {
+                if (f) f.dispose();
+            }
+        }
+
+        function totalSamples() { return labels.reduce((s, l) => s + l.count, 0); }
+
+        function updateLabelCounts() {
+            labels.forEach(l => {
+                const el = document.getElementById('count-' + l.id);
+                if (el) el.textContent = l.count;
+            });
+            const ready = labels.filter(l => l.count >= 5).length >= 2;
+            const hint = document.getElementById('lab-hint');
+            if (hint) {
+                hint.textContent = ready
+                    ? '🎉 ข้อมูลพอแล้ว! เล็งกล้องไปที่ของ แล้วดูคำทายด้านล่าง'
+                    : 'เก็บให้ได้อย่างน้อยคลาสละ 5 ภาพ (ยิ่งเยอะยิ่งแม่น)';
+            }
+        }
+
+        function startPredictLoop() {
+            if (predictTimer) clearInterval(predictTimer);
+            // 4 ครั้ง/วินาที: เร็วพอให้รู้สึกเรียลไทม์ แต่ไม่กินแบตเหมือนวิ่งทุกเฟรม
+            predictTimer = setInterval(predictOnce, 250);
+        }
+
+        let predicting = false;
+
+        async function predictOnce() {
+            if (predicting) return;   // เครื่องช้าอาจทายไม่ทัน 250ms อย่าให้ซ้อนกัน
+            if (capturing) return;    // ระหว่างกดค้างเก็บภาพ พักการทายไว้ก่อน
+            if (!classifier || !featureModel || !camStream) return;
+            if (classifier.getNumClasses() < 2) return;
+            const video = document.getElementById('cam-video');
+            if (!video || video.readyState < 2) return;
+
+            predicting = true;
+            let f = null;
+            try {
+                f = embed(video);
+                const counts = classifier.getClassExampleCount();
+                const totalEx = Object.values(counts).reduce((a, b) => a + b, 0);
+                const k = Math.max(1, Math.min(10, totalEx));
+                const res = await classifier.predictClass(f, k);
+                renderPrediction(res);
+                if (!done['4']) completeMission(4, true);
+            } catch (e) {
+                // อาจชนกับการเก็บภาพ/ล้างคลาสชั่วคราว รอบถัดไปค่อยลองใหม่
+            } finally {
+                // ต้องอยู่ใน finally เสมอ ไม่งั้นพลาดครั้งเดียว การทายจะหยุดถาวร
+                if (f) f.dispose();
+                predicting = false;
+            }
+        }
+
+        function renderPrediction(res) {
+            const box = document.getElementById('pred-box');
+            if (!box) return;
+            box.innerHTML = labels.map(l => {
+                const p = Math.round((res.confidences[l.id] || 0) * 100);
+                const win = res.label === l.id;
+                return `
+                <div class="mb-2">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-bold ${win ? 'text-gray-900' : 'text-gray-400'}">${win ? '👉 ' : ''}${escapeHtml(l.name)}</span>
+                        <span class="font-mono ${win ? 'text-gray-900' : 'text-gray-400'}">${p}%</span>
+                    </div>
+                    <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-200" style="width:${p}%;background:${l.color}"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function setActiveLabel(id) {
+            activeLabel = id;
+            labels.forEach(l => {
+                const btn = document.getElementById('lab-' + l.id);
+                if (!btn) return;
+                if (l.id === id) {
+                    btn.style.borderColor = l.color;
+                    btn.style.background = l.color + '14';
+                    btn.classList.add('ring-2');
+                    btn.style.setProperty('--tw-ring-color', l.color);
+                } else {
+                    btn.style.borderColor = '#E5E7EB';
+                    btn.style.background = '#fff';
+                    btn.classList.remove('ring-2');
+                }
+            });
+        }
+
+        function renameLabel(id, val) {
+            const L = labels.find(l => l.id === id);
+            if (L) L.name = val || L.name;
+        }
+
+        async function handleFiles(input) {
+            if (!input.files || !input.files.length) return;
+            try { await ensureAI(); } catch (e) { return; }
+            setLabStatus('⏳ กำลังอ่านรูป...', 'busy');
+            let n = 0;
+            for (const file of Array.from(input.files).slice(0, 40)) {
+                try {
+                    const img = await fileToImage(file);
+                    await addSampleFrom(img);
+                    URL.revokeObjectURL(img.src);
+                    n++;
+                } catch (e) { /* ข้ามไฟล์ที่อ่านไม่ได้ */ }
+            }
+            input.value = '';
+            setLabStatus(`✅ เพิ่ม ${n} ภาพเข้าคลาส "${escapeHtml((labels.find(l => l.id === activeLabel) || {}).name)}" แล้ว`, 'ok');
+            if (!camStream) {
+                document.getElementById('test-upload-zone').classList.remove('hidden');
+            }
+        }
+
+        function fileToImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // โหมดไม่มีกล้อง: อัปโหลดรูปทดสอบ 1 รูปแล้วให้ AI ทาย
+        async function testWithFile(input) {
+            if (!input.files || !input.files[0]) return;
+            if (!classifier || classifier.getNumClasses() < 2) {
+                setLabStatus('❌ ต้องมีอย่างน้อย 2 คลาสก่อน ถึงจะทดสอบได้', 'err');
+                return;
+            }
+            const img = await fileToImage(input.files[0]);
+            const prev = document.getElementById('test-preview');
+            if (prev) { prev.src = img.src; prev.classList.remove('hidden'); }
+            const f = embed(img);
+            const counts = classifier.getClassExampleCount();
+            const totalEx = Object.values(counts).reduce((a, b) => a + b, 0);
+            const res = await classifier.predictClass(f, Math.max(1, Math.min(10, totalEx)));
+            f.dispose();
+            renderPrediction(res);
+            completeMission(4, true);
+            input.value = '';
+        }
+
+        function resetLab() {
+            if (classifier) classifier.clearAllClasses();
+            labels.forEach(l => l.count = 0);
+            updateLabelCounts();
+            const box = document.getElementById('pred-box');
+            if (box) box.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">ยังไม่มีคำทาย — เก็บตัวอย่างให้ครบ 2 คลาสก่อน</p>';
+            setLabStatus('↺ ล้างข้อมูลแล้ว เริ่มสอนใหม่ได้เลย', 'ok');
+        }
+
+        function renderTopic2() {
+            return `
+            <div class="animate-fade-in space-y-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-xl sm:text-2xl font-bold text-green-700">🌿 สร้าง AI จำแนกภาพด้วยมือถือ</h2>
+                    <span class="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shrink-0">On-device AI</span>
+                </div>
+
+                <p class="text-gray-600 text-sm">
+                    วันนี้เราจะไม่ใช่แค่ "ผู้ใช้" แต่จะเป็น "ผู้สร้าง" AI ด้วยตัวเอง!
+                    ทั้งหมดนี้ทำงาน<strong>ในมือถือของเราเอง</strong> — รูปไม่ถูกส่งขึ้นเซิร์ฟเวอร์ที่ไหนทั้งสิ้น
+                </p>
+
+                <!-- Steps -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white p-3 rounded-xl border-b-4 border-green-200 shadow-sm text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">📸</div>
+                        <h3 class="font-bold text-gray-800 text-xs sm:text-sm">1. เก็บข้อมูล</h3>
+                        <p class="text-[10px] text-gray-500 mt-1">กดค้างถ่ายรัวๆ</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border-b-4 border-green-400 shadow-sm text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">🧠</div>
+                        <h3 class="font-bold text-gray-800 text-xs sm:text-sm">2. ฝึกฝน</h3>
+                        <p class="text-[10px] text-gray-500 mt-1">เรียนรู้ทันที</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border-b-4 border-green-600 shadow-sm text-center">
+                        <div class="text-2xl sm:text-3xl mb-1">🎯</div>
+                        <h3 class="font-bold text-gray-800 text-xs sm:text-sm">3. ทดสอบ</h3>
+                        <p class="text-[10px] text-gray-500 mt-1">ทายถูกไหม?</p>
+                    </div>
+                </div>
+
+                <!-- กล้อง -->
+                <div class="rounded-2xl overflow-hidden border-2 border-gray-200 bg-gray-900 relative">
+                    <video id="cam-video" playsinline muted autoplay></video>
+                    <div id="cam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 gap-3">
+                        <div class="text-5xl">📷</div>
+                        <p class="text-gray-300 text-sm">เปิดกล้องหลังของมือถือ แล้วเล็งไปที่ของที่อยากให้ AI จำ</p>
+                        <button id="cam-open-btn" onclick="startCamera()"
+                            class="btn-go bg-green-600 text-white font-bold px-6 rounded-xl shadow-lg tap">เปิดกล้อง</button>
+                    </div>
+                </div>
+                <p id="lab-status" class="text-xs text-gray-500">แตะ "เปิดกล้อง" เพื่อเริ่ม (ครั้งแรกจะโหลดโมเดลราว 5 MB)</p>
+
+                <!-- คลาส -->
+                <div>
+                    <p class="text-sm font-bold text-gray-700 mb-2">3 ➜ สอน AI ว่าอะไรเป็นอะไร</p>
+                    <p id="lab-hint" class="text-xs text-gray-500 mb-3">เก็บให้ได้อย่างน้อยคลาสละ 5 ภาพ (ยิ่งเยอะยิ่งแม่น)</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${labels.map(l => `
+                        <div id="lab-${l.id}" onclick="setActiveLabel('${l.id}')"
+                             class="tap border-2 rounded-xl p-3 transition" style="border-color:#E5E7EB">
+                            <input value="${escapeHtml(l.name)}" oninput="renameLabel('${l.id}', this.value)"
+                                   onclick="event.stopPropagation()" enterkeyhint="done"
+                                   class="w-full text-sm font-bold bg-transparent border-b border-dashed border-gray-300 pb-1 focus:outline-none"
+                                   style="color:${l.color}">
+                            <div class="flex items-end justify-between mt-2">
+                                <span class="text-[10px] text-gray-400">ตัวอย่าง</span>
+                                <span class="text-2xl font-bold" id="count-${l.id}" style="color:${l.color}">${l.count}</span>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2">แตะการ์ดเพื่อเลือกคลาสที่กำลังเก็บ • แตะชื่อเพื่อเปลี่ยนชื่อได้</p>
+                </div>
+
+                <!-- ปุ่มเก็บภาพ -->
+                <div id="capture-zone" class="hidden">
+                    <button id="hold-btn"
+                        onpointerdown="holdStart(event)" onpointerup="holdEnd()" onpointercancel="holdEnd()" onpointerleave="holdEnd()"
+                        oncontextmenu="return false"
+                        class="btn-go w-full bg-green-600 text-white font-bold rounded-2xl py-5 text-lg shadow-lg select-none tap">
+                        📸 กดค้างเพื่อเก็บภาพ
+                    </button>
+                </div>
+
+                <!-- อัปโหลดรูป (สำรอง เมื่อกล้องใช้ไม่ได้) -->
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <p class="text-xs font-bold text-gray-600 mb-2">ไม่อยากใช้กล้อง? เลือกรูปจากมือถือก็ได้</p>
+                    <input type="file" accept="image/*" multiple onchange="handleFiles(this)"
+                        class="w-full text-xs text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-green-100 file:text-green-700">
+                    <p class="text-[10px] text-gray-400 mt-2">รูปจะเข้าคลาสที่เลือกไว้ด้านบน</p>
+                </div>
+
+                <!-- คำทาย -->
+                <div class="bg-white border-2 border-green-200 rounded-xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-3">4 ➜ 🎯 AI ทายว่า...</p>
+                    <div id="pred-box">
+                        <p class="text-xs text-gray-400 text-center py-4">ยังไม่มีคำทาย — เก็บตัวอย่างให้ครบ 2 คลาสก่อน</p>
+                    </div>
+                    <div id="test-upload-zone" class="hidden mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-xs font-bold text-gray-600 mb-2">ทดสอบด้วยรูปใหม่ 1 รูป:</p>
+                        <input type="file" accept="image/*" onchange="testWithFile(this)"
+                            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700">
+                        <img id="test-preview" class="hidden mt-3 rounded-lg max-h-40 mx-auto">
+                    </div>
+                    <button onclick="resetLab()" class="mt-3 w-full text-[11px] text-gray-400 min-h-[44px] tap">↺ ล้างแล้วสอนใหม่</button>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-green-50 rounded-xl p-4 sm:p-5 border border-green-100">
+                    <h3 class="font-bold text-green-900 mb-2">💡 Tips สำหรับนักสร้าง AI</h3>
+                    <ul class="list-disc pl-5 text-sm text-green-800 space-y-2">
+                        <li><strong>รอบแรกเอาง่ายก่อน:</strong> ลองของที่ต่างกันชัดๆ เช่น <em>ขวดน้ำ</em> กับ <em>รองเท้า</em> — AI จะทายแม่นเลย</li>
+                        <li><strong>Challenge:</strong> ลองของที่คล้ายกันมากๆ เช่น ใบกะเพรา กับ ใบโหระพา ดูสิว่า AI งงไหม</li>
+                        <li><strong>ถ้า AI ทายผิด:</strong> เพิ่มรูปมุมแปลกๆ หรือแสงต่างกัน แล้วเก็บใหม่ — นี่คือบทเรียนเรื่อง <strong>Bias</strong> ที่เจอในหัวข้อ 1 เลย</li>
+                        <li><strong>เก็บพื้นหลังหลากหลาย:</strong> ไม่งั้น AI อาจจำ "โต๊ะ" แทนที่จะจำ "ใบไม้"</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500">
+                    🔬 <strong>เบื้องหลัง:</strong> ใช้ MobileNet แปลงภาพเป็นตัวเลข 1,000 ค่า แล้วให้ KNN เทียบว่า
+                    ภาพใหม่เหมือนตัวอย่างของคลาสไหนมากที่สุด — เทคนิคนี้เรียกว่า <strong>Transfer Learning</strong>
+                    เป็นวิธีเดียวกับที่ Teachable Machine ใช้ แต่รันบนมือถือได้
+                </div>
+            </div>`;
+        }
+
+        // =====================================================================
+        //  5) Agent simulator
+        // =====================================================================
+        let selectedTools = [];
+
+        window.activateTool = function (btn, tool) {
+            if (tool === 'paint') { toast('🎨 Paint ไม่เกี่ยวกับภารกิจนี้ — Agent ที่ดีต้องเลือกเครื่องมือให้ถูก!'); return; }
+            if (btn.classList.contains('ring-2')) {
+                btn.classList.remove('ring-2', 'ring-white', 'bg-blue-600');
+                btn.classList.add('bg-gray-800');
+                selectedTools = selectedTools.filter(t => t !== tool);
+            } else {
+                btn.classList.add('ring-2', 'ring-white', 'bg-blue-600');
+                btn.classList.remove('bg-gray-800');
+                selectedTools.push(tool);
+            }
+            const runBtn = document.getElementById('run-btn');
+            if (!runBtn) return;
+            if (selectedTools.length >= 2) {
+                runBtn.disabled = false;
+                runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                runBtn.classList.add('animate-pulse');
+            } else {
+                runBtn.disabled = true;
+                runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                runBtn.classList.remove('animate-pulse');
+            }
+        };
+
+        window.runAgent = function () {
+            const processDiv = document.getElementById('agent-process');
+            const runBtn = document.getElementById('run-btn');
+            runBtn.innerHTML = '⚙️ Agent Working...';
+            processDiv.innerHTML = '';
+
+            const steps = [
+                { tool: 'search', text: 'Thinking: "หาข้อมูลที่เที่ยวเชียงใหม่..."', color: 'text-blue-400' },
+                { tool: 'calendar', text: 'Action: "ตรวจสอบตารางว่างวันที่ 10-12"', color: 'text-green-400' },
+                { tool: 'booking', text: 'Action: "จองตั๋วเครื่องบินไป-กลับ"', color: 'text-purple-400' },
+                { tool: 'email', text: 'Action: "ส่งแผนเที่ยวให้เพื่อนทาง Email"', color: 'text-red-400' }
+            ];
+
+            let i = 0;
+            function nextStep() {
+                if (i >= steps.length) {
+                    const missing = steps.filter(s => !selectedTools.includes(s.tool));
+                    processDiv.innerHTML += missing.length
+                        ? `<div class="p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-200 text-xs text-center mt-2">⚠️ ทำได้บางส่วน — ขาดเครื่องมือ ${missing.length} อย่าง ลองเลือกเพิ่มแล้วรันใหม่</div>`
+                        : `<div class="p-3 bg-green-900/50 border border-green-500 rounded text-green-300 font-bold text-center mt-2">✨ MISSION COMPLETE!</div>`;
+                    runBtn.innerHTML = '✔ Done — แตะเพื่อรันใหม่';
+                    runBtn.classList.remove('animate-pulse');
+                    return;
+                }
+                const step = steps[i];
+                if (selectedTools.includes(step.tool)) {
+                    processDiv.innerHTML += `
+                        <div class="flex items-start gap-2 animate-slide-up mb-2">
+                            <div class="w-2 h-2 rounded-full bg-gray-400 mt-1.5 shrink-0"></div>
+                            <div class="min-w-0">
+                                <span class="font-mono text-[11px] sm:text-sm ${step.color} break-words">${step.text}</span>
+                                <span class="ml-1 text-[10px] bg-gray-700 px-1.5 py-0.5 rounded text-gray-300 whitespace-nowrap">${step.tool}</span>
+                            </div>
+                        </div>`;
+                }
+                i++;
+                setTimeout(nextStep, 900);
+            }
+            nextStep();
+        };
+
+        // =====================================================================
+        //  6) Prompt Lab
+        //     เดิมเป็น 4 คอลัมน์ที่มี scroll ในตัว พอย่อลงมือถือจะซ้อนกัน
+        //     กลายเป็นกับดัก scroll  เปลี่ยนเป็นแถวชิปเลื่อนแนวนอนแทน
+        // =====================================================================
+        const promptParts = {
+            subjects: ['นักเรียนไทย', 'แมวอวกาศ', 'หุ่นยนต์บริการ', 'ทีเร็กซ์ใส่สูท', 'มังกร', 'ตัวตลกผู้เศร้าสร้อย', 'หุ่นยนต์รวน', 'ราชา', 'แวมไพร์ดิสโก้', 'คาปิบาร่าสุดชิล'],
+            actions: ['กำลังอ่านหนังสือ', 'เล่นสเก็ตบอร์ด', 'ดื่มกาแฟ', 'บินผ่านตึกสูง', 'เต้นรำ', 'กินไอติม', 'กระโดดปาร์กูร์ (Parkour)', 'นอนอืดอยู่บนโซฟา', 'ถ่ายเซลฟี่หน้ากระจก'],
+            styles: ['สไตล์ Cyberpunk', 'ภาพสีน้ำ (Watercolor)', 'ภาพพิกเซล (Pixel Art)', 'สไตล์การ์ตูนญี่ปุ่น 90s', 'สมจริงแบบ 4K', 'ภาพสเก็ตช์ดินสอ (Pencil Sketch)', 'สไตล์หนังสือการ์ตูนคอมมิค (Comic Book)'],
+            moods: ['แสงนีออน (Neon)', 'ยามพระอาทิตย์ตก (Sunset)', 'บรรยากาศลึกลับ (Mysterious)', 'สีพาสเทลสดใส (Pastel)', 'ฝนตกพรำๆ (Rainy Vibes)', 'โลกใต้น้ำ (Underwater)', 'บรรยากาศชวนฝัน (Dreamy)']
+        };
+
+        let currentPrompt = { subject: '', action: '', style: '', mood: '' };
+
+        function renderPromptBuilder() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">🧪 ห้องทดลอง Prompt (Prompt Lab)</h2>
+                        <p class="text-sm text-gray-500 mt-1">"Prompt คือคาถาเวทมนตร์" ยิ่งร่ายคาถาละเอียด AI ยิ่งเสกภาพได้สวย</p>
+                    </div>
+
+                    <!-- Output Box: sticky ให้เห็นคาถาที่กำลังปรุงตลอดเวลาที่เลื่อนเลือก -->
+                    <div class="sticky top-16 z-20 bg-gray-900 rounded-xl p-4 mb-5 shadow-lg">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-t-xl"></div>
+                        <p class="text-gray-400 text-[10px] uppercase tracking-widest mb-2 font-mono">Your Prompt:</p>
+                        <div id="prompt-display"
+                            class="text-white text-base sm:text-xl font-mono min-h-[52px] flex items-center justify-center text-center leading-snug">
+                            (เลือกส่วนผสมด้านล่างเพื่อปรุงคาถา...)
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <button onclick="shufflePrompt()"
+                                class="btn-go bg-white/10 text-white text-xs rounded-full border border-white/20 tap">🎲 สุ่มให้</button>
+                            <button onclick="copyPrompt()"
+                                class="btn-go bg-white text-gray-900 font-bold text-xs rounded-full tap">8 ➜ 📋 Copy คาถา</button>
+                        </div>
+                    </div>
+
+                    <!-- Builder Controls -->
+                    <p class="text-sm font-bold text-gray-600 mb-1">7 ➜ 🚀 เลือกส่วนผสมเพื่อปรุงคาถา:</p>
+                    <p class="text-[11px] text-gray-400 mb-3">📱 แต่ละแถวเลื่อนซ้าย-ขวาได้</p>
+                    <div class="space-y-4">
+                        ${renderPromptRow('1. ใคร/อะไร (Subject)', 'subjects', 'text-blue-700')}
+                        ${renderPromptRow('2. ทำอะไร (Action)', 'actions', 'text-green-700')}
+                        ${renderPromptRow('3. สไตล์ภาพ (Style)', 'styles', 'text-pink-700')}
+                        ${renderPromptRow('4. บรรยากาศ (Mood)', 'moods', 'text-purple-700')}
+                    </div>
+
+                    <!-- ส่งไปสร้างภาพจริง -->
+                    <div class="mt-6 bg-indigo-50 rounded-xl p-4 sm:p-5 border border-indigo-200">
+                        <strong class="text-indigo-900 text-sm">9 ➜ ✨ เคล็ดลับพ่อมด AI (Prompt Engineer)</strong>
+                        <p class="text-xs text-indigo-800 mt-1 mb-3">
+                            กด <strong>Copy คาถา</strong> ด้านบนก่อน แล้วแตะแอปข้างล่าง → <strong>กดค้างในช่องพิมพ์ แล้วเลือก "วาง"</strong> เพื่อให้ AI เสกภาพออกมาจริงๆ
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="https://gemini.google.com/" target="_blank" rel="noopener" onclick="goMission(9)"
+                                class="btn-go bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold tap">✨ Gemini <span class="text-[9px] text-gray-400 ml-1">มีแอป</span></a>
+                            <a href="https://chatgpt.com/" target="_blank" rel="noopener" onclick="goMission(9)"
+                                class="btn-go bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold tap">💬 ChatGPT <span class="text-[9px] text-gray-400 ml-1">มีแอป</span></a>
+                            <a href="https://www.canva.com/ai-image-generator" target="_blank" rel="noopener" onclick="goMission(9)"
+                                class="btn-go bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold tap">🎨 Canva</a>
+                            <a href="https://copilot.microsoft.com/" target="_blank" rel="noopener" onclick="goMission(9)"
+                                class="btn-go bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold tap">🖼️ Copilot</a>
+                        </div>
+                        <p class="text-[10px] text-indigo-600 mt-2">ทุกตัวต้องล็อกอินก่อนใช้ — Gemini ใช้ Google account ที่ล็อกอินอยู่แล้วได้เลย</p>
+                        <div class="mt-3">${missionBtn(9)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPromptRow(title, key, headerClass) {
+            return `
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-wide mb-1 ${headerClass}">${title}</div>
+                    <div class="chip-row" id="row-${key}">
+                        ${promptParts[key].map((item, idx) => `
+                            <div onclick="selectPart('${key}', ${idx}, this)"
+                                 class="chip text-xs bg-white border border-gray-200 px-3 rounded-full text-gray-600 shadow-sm">
+                                ${item}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectPart(key, idx, el) {
+            const value = promptParts[key][idx];
+            const container = el.parentElement;
+            Array.from(container.children).forEach(child => child.classList.remove('selected'));
+            el.classList.add('selected');
+
+            if (key === 'subjects') currentPrompt.subject = value;
+            if (key === 'actions') currentPrompt.action = value;
+            if (key === 'styles') currentPrompt.style = `, ${value}`;
+            if (key === 'moods') currentPrompt.mood = `, ${value}`;
+
+            updateDisplay();
+            if (currentPrompt.subject && currentPrompt.action) completeMission(7, true);
+        }
+
+        function shufflePrompt() {
+            const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+            const map = { subjects: 'subject', actions: 'action', styles: 'style', moods: 'mood' };
+            Object.keys(map).forEach(key => {
+                const val = pick(promptParts[key]);
+                const row = document.getElementById('row-' + key);
+                if (!row) return;
+                Array.from(row.children).forEach(c => {
+                    const hit = c.textContent.trim() === val;
+                    c.classList.toggle('selected', hit);
+                    if (hit) {
+                        if (typeof row.scrollTo === 'function') row.scrollTo({ left: c.offsetLeft - 12, behavior: 'smooth' });
+                        else row.scrollLeft = c.offsetLeft - 12;
+                    }
+                });
+                currentPrompt[map[key]] = (key === 'styles' || key === 'moods') ? `, ${val}` : val;
+            });
+            updateDisplay();
+            completeMission(7, true);
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('prompt-display');
+            if (!display) return;
+            const { subject, action, style, mood } = currentPrompt;
+            if (!subject && !action) {
+                display.innerText = "(เลือกส่วนผสมด้านล่างเพื่อปรุงคาถา...)";
+                return;
+            }
+            display.innerText = `${subject} ${action}${style}${mood}`;
+        }
+
+        // คัดลอกให้ผ่านบนมือถือ: ใช้ Clipboard API ก่อน แล้วค่อยถอยไปวิธีเดิม
+        // (iOS Safari ต้องใช้ setSelectionRange ไม่งั้น select() จะไม่ทำงาน)
+        async function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* ลองวิธีถัดไป */ }
+            }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.top = '0';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                ta.setSelectionRange(0, 999999);
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch (e) { return false; }
+        }
+
+        async function copyPrompt() {
+            const text = document.getElementById('prompt-display').innerText;
+            if (!text || text.includes('เลือกส่วนผสม')) {
+                toast('เลือกส่วนผสมอย่างน้อย "ใคร/อะไร" กับ "ทำอะไร" ก่อนนะ');
+                return;
+            }
+            const ok = await copyText(text);
+            if (ok) {
+                completeMission(8);
+                toast('📋 คัดลอกคาถาแล้ว! เปิดแอป AI ด้านล่างแล้วกดค้าง → วาง');
+            } else {
+                toast('ก๊อปไม่ได้ — กดค้างที่ข้อความคาถาแล้วเลือก "คัดลอก" แทนได้');
+            }
+        }
+
+        async function copyAgentPrompt() {
+            const el = document.getElementById('agent-prompt');
+            if (!el) return;
+            const ok = await copyText(el.innerText);
+            toast(ok ? '📋 คัดลอก prompt แล้ว! ไปวางใน Claude หรือ Gemini ได้เลย' : 'ก๊อปไม่ได้ — กดค้างที่ข้อความแล้วเลือก "คัดลอก"');
+        }
+
+        // =====================================================================
+        //  7) Navigation
+        // =====================================================================
+        function renderTab(id, preserveScroll) {
+            const y = window.scrollY;
+            const contentDiv = document.getElementById('content-area');
+            if (id === 1) contentDiv.innerHTML = renderTopic1();
+            else if (id === 2) contentDiv.innerHTML = renderTopic2();
+            else if (id === 3) contentDiv.innerHTML = renderTopic3();
+            else if (id === 4) contentDiv.innerHTML = renderPromptBuilder();
+            else contentDiv.innerHTML = renderTopic5();
+
+            if (id === 2) { setActiveLabel(activeLabel); updateLabelCounts(); }
+            if (id === 4) { restorePromptSelection(); }
+            if (preserveScroll) window.scrollTo(0, y);
+        }
+
+        // เข้าแท็บ 4 ใหม่แล้วคาถาที่ปรุงไว้ต้องยังอยู่ (มือถือสลับแท็บบ่อย)
+        function restorePromptSelection() {
+            const map = { subjects: 'subject', actions: 'action', styles: 'style', moods: 'mood' };
+            Object.keys(map).forEach(key => {
+                let val = currentPrompt[map[key]];
+                if (!val) return;
+                val = val.replace(/^,\s*/, '');
+                const row = document.getElementById('row-' + key);
+                if (!row) return;
+                Array.from(row.children).forEach(c => {
+                    if (c.textContent.trim() === val) c.classList.add('selected');
+                });
+            });
+            updateDisplay();
+        }
+
+        function switchTab(id) {
+            stopCamera(); // สำคัญ: ออกจากแท็บ 2 ต้องปิดกล้อง ไม่งั้นไฟกล้องค้างและกินแบต
+            currentTab = id;
+
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active-1', 'active-2', 'active-3', 'active-4', 'active-5');
+            });
+            const t = document.getElementById(`tab-${id}`);
+            if (t) t.classList.add(`active-${id}`);
+
+            document.querySelectorAll('.tabbar-item').forEach(el => {
+                el.classList.remove('on-1', 'on-2', 'on-3', 'on-4', 'on-5');
+                el.classList.add('text-gray-400');
+            });
+            const tb = document.getElementById(`tb-${id}`);
+            if (tb) { tb.classList.add(`on-${id}`); tb.classList.remove('text-gray-400'); }
+
+            const eyebrow = document.getElementById('mobile-topic-eyebrow');
+            const title = document.getElementById('mobile-topic-title');
+            if (eyebrow) eyebrow.textContent = `Topic ${id} / 5`;
+            if (title) title.textContent = TOPIC_META[id].short;
+
+            const nextBtn = document.getElementById('next-topic-btn');
+            if (nextBtn) nextBtn.classList.toggle('hidden', id === 5);
+
+            renderTab(id);
+            store.set('z2h_tab', String(id));
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        function goNextTopic() {
+            if (currentTab < 5) switchTab(currentTab + 1);
+        }
+
+        function resetProgress() {
+            if (!confirm('ล้างความคืบหน้าทั้งหมด เริ่มใหม่ตั้งแต่ต้น?')) return;
+            done = {};
+            saveDone();
+            currentPrompt = { subject: '', action: '', style: '', mood: '' };
+            resetLab();
+            refreshProgress();
+            renderTab(currentTab);
+            toast('↺ ล้างความคืบหน้าแล้ว');
+        }
+
+        // =====================================================================
+        //  8) Chart — เดิมเป็นค่าคงที่ 20/20/20/20/20 ตอนนี้ให้สะท้อนภารกิจจริง
+        // =====================================================================
+        let chart = null;
+
+        function topicXp() {
+            return [1, 2, 3, 4, 5].map(t => {
+                const ids = Object.keys(MISSIONS).filter(m => MISSIONS[m].topic === t);
+                const got = ids.filter(m => done[m]).length;
+                return Math.round(got / ids.length * 20);
+            });
+        }
+
+        function updateChart() {
+            if (!chart) return;
+            chart.data.datasets[0].data = topicXp().map(v => Math.max(v, 1.2)); // เหลือเส้นบางๆ ให้เห็นโครง
+            chart.update('none');
+        }
+
+        function initChart() {
+            const cv = document.getElementById('moduleChart');
+            if (!cv || typeof Chart === 'undefined') return;
+            chart = new Chart(cv.getContext('2d'), {
+                type: 'polarArea',
+                data: {
+                    labels: ['เข้าใจ AI', 'สร้างโมเดล', 'จริยธรรม', 'สั่งงาน AI', 'Agentic AI'],
+                    datasets: [{
+                        data: topicXp().map(v => Math.max(v, 1.2)),
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.6)',
+                            'rgba(5, 150, 105, 0.6)',
+                            'rgba(219, 39, 119, 0.6)',
+                            'rgba(124, 58, 237, 0.6)',
+                            'rgba(234, 88, 12, 0.6)'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400 },
+                    scales: { r: { min: 0, max: 20, ticks: { display: false }, grid: { color: '#f3f4f6' } } },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 10 }, boxWidth: 10 } },
+                        tooltip: { callbacks: { label: c => `${c.raw < 2 ? 0 : Math.round(c.raw)} / 20 XP` } }
+                    }
+                }
+            });
+        }
+
+        // =====================================================================
+        //  9) Boot
+        // =====================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            const saved = parseInt(store.get('z2h_tab') || '1', 10);
+            switchTab(saved >= 1 && saved <= 5 ? saved : 1);
+            refreshProgress();
+        });
+
+        // ปิดกล้องเมื่อสลับออกไปแอปอื่น แล้วเปิดใหม่ตอนกลับมา
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') stopCamera();
+        });
+        window.addEventListener('pagehide', stopCamera);
+    </script>
+</body>
+
+</html>
