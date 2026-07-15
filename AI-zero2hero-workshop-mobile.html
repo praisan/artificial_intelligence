@@ -842,11 +842,21 @@
 
         async function _loadAI() {
             setLabStatus('⏳ กำลังโหลดเครื่องมือ AI...', 'busy');
-            if (!window.tf) await loadScript(TFJS_URL);
-            if (!window.knnClassifier) await loadScript(KNN_URL);
+            try {
+                if (!window.tf) await loadScript(TFJS_URL);
+                if (!window.knnClassifier) await loadScript(KNN_URL);
+            } catch (e) {
+                throw new Error('โหลดไลบรารี AI ไม่สำเร็จ — เครือข่ายอาจบล็อก cdn.jsdelivr.net อยู่');
+            }
 
             setLabStatus('⏳ กำลังโหลดสมองของ AI (MobileNet ~5 MB) ครั้งแรกอาจรอสักครู่...', 'busy');
-            const full = await tf.loadLayersModel(MOBILENET_URL);
+            let full;
+            try {
+                full = await tf.loadLayersModel(MOBILENET_URL);
+            } catch (e) {
+                // เจอบ่อยเวลาเน็ตองค์กรบล็อก Google Cloud Storage — บอกโดเมนไปเลยจะได้แจ้ง IT ถูก
+                throw new Error('โหลดโมเดล AI ไม่สำเร็จ — เน็ตไม่เสถียร หรือเครือข่ายบล็อก storage.googleapis.com อยู่');
+            }
             // ตัดหัว classifier ของ ImageNet ออก เหลือแค่ส่วนที่ "มอง" ภาพเป็นตัวเลข
             featureModel = tf.model({ inputs: full.inputs, outputs: full.getLayer('conv_preds').output });
             tf.tidy(() => featureModel.predict(tf.zeros([1, 224, 224, 3]))); // warm-up
@@ -860,11 +870,21 @@
             if (!aiPromise) {
                 aiPromise = _loadAI().catch(e => {
                     aiPromise = null; // ให้ลองใหม่ได้
-                    setLabStatus('❌ ' + e.message + ' — แตะเพื่อลองใหม่', 'err');
+                    setLabStatus('❌ ' + e.message +
+                        ' <button onclick="retryAI()" class="ml-1 underline font-bold text-red-700">ลองโหลดใหม่</button>', 'err');
                     throw e;
                 });
             }
             return aiPromise;
+        }
+
+        async function retryAI() {
+            try {
+                await ensureAI();
+                setCaptureEnabled(true);
+                setLabStatus('✅ โหลด AI สำเร็จ! เล็งไปที่ของ แล้วกดค้างปุ่มเก็บภาพ', 'ok');
+                if (camStream) startPredictLoop();
+            } catch (e) { /* ensureAI ตั้งข้อความ error ไว้แล้ว */ }
         }
 
         function embed(src) {
@@ -880,38 +900,82 @@
             const video = document.getElementById('cam-video');
             if (!video) return;
 
-            if (!window.isSecureContext) {
-                setLabStatus('❌ กล้องใช้ได้เฉพาะเว็บที่เป็น https:// — ใช้ปุ่ม "เลือกรูป" แทนได้', 'err');
-                return;
-            }
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                setLabStatus('❌ เบราว์เซอร์นี้เปิดกล้องไม่ได้ — ใช้ปุ่ม "เลือกรูป" แทน', 'err');
+            // Android/Chrome ซ่อน navigator.mediaDevices ทั้งก้อนบน http:// จึงต้องเช็คก่อน
+            if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setLabStatus(location.protocol === 'http:'
+                    ? '❌ หน้านี้เปิดผ่าน http:// — Android จะไม่ยอมให้เว็บใช้กล้อง ต้องเปิดผ่าน https:// เท่านั้น (ระหว่างนี้ใช้ปุ่ม "เลือกรูป" ด้านล่างแทนได้)'
+                    : '❌ เบราว์เซอร์นี้เปิดกล้องไม่ได้ — ใช้ปุ่ม "เลือกรูป" ด้านล่างแทนได้เลย', 'err');
                 return;
             }
 
-            try { await ensureAI(); } catch (e) { return; } // ensureAI แสดง error ของตัวเองแล้ว
-
+            // สำคัญ: ขอสิทธิ์กล้อง "ทันที" ที่นิ้วยังแตะอยู่
+            // ห้ามรอโหลดโมเดลก่อน เพราะ (1) กล้องกับโมเดลไม่เกี่ยวกันเลย
+            // (2) ถ้าเน็ตช้า/โหลดโมเดลไม่ผ่าน popup ขออนุญาตจะไม่เด้งเลย ดูเหมือนปุ่มเสีย
+            // (3) user activation หมดอายุระหว่างรอ บางเบราว์เซอร์จะกลืน popup ทิ้ง
+            setLabStatus('⏳ กำลังขอสิทธิ์ใช้กล้อง — ถ้ามีหน้าต่างเด้งขึ้นมา กด "อนุญาต" (Allow)', 'busy');
             try {
-                setLabStatus('⏳ กำลังเปิดกล้อง...', 'busy');
-                camStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: false
-                });
-                video.srcObject = camStream;
-                video.setAttribute('playsinline', ''); // iOS: ห้ามเด้งเป็น fullscreen
-                video.muted = true;
-                await video.play();
-                document.getElementById('cam-placeholder').classList.add('hidden');
-                document.getElementById('cam-open-btn').classList.add('hidden');
-                document.getElementById('capture-zone').classList.remove('hidden');
+                camStream = await getCamStream();
+            } catch (e) {
+                setLabStatus('❌ ' + camErrorMessage(e), 'err');
+                return;
+            }
+
+            video.srcObject = camStream;
+            video.setAttribute('playsinline', ''); // iOS: ห้ามเด้งเป็น fullscreen
+            video.muted = true;
+            try { await video.play(); } catch (e) { /* บางเบราว์เซอร์เล่นเองอยู่แล้ว */ }
+            document.getElementById('cam-placeholder').classList.add('hidden');
+            document.getElementById('cam-open-btn').classList.add('hidden');
+            document.getElementById('capture-zone').classList.remove('hidden');
+
+            // กล้องติดแล้ว ค่อยโหลดโมเดลคู่ขนาน — ถ้าโหลดพลาด กล้องก็ยังเปิดค้างไว้ให้กดลองใหม่ได้
+            setCaptureEnabled(false);
+            try {
+                await ensureAI();
+                setCaptureEnabled(true);
                 setLabStatus('✅ กล้องพร้อม! เล็งไปที่ของ แล้วกดค้างปุ่มเก็บภาพ', 'ok');
                 startPredictLoop();
             } catch (e) {
-                const msg = (e && e.name === 'NotAllowedError')
-                    ? 'ไม่ได้รับอนุญาตให้ใช้กล้อง — กดไอคอน 🔒 ที่แถบที่อยู่เว็บ แล้วเปิดสิทธิ์กล้อง หรือใช้ปุ่ม "เลือกรูป" แทน'
-                    : 'เปิดกล้องไม่ได้ — ใช้ปุ่ม "เลือกรูป" แทนได้เลย';
-                setLabStatus('❌ ' + msg, 'err');
+                // ensureAI ตั้งข้อความ error ของตัวเองแล้ว
             }
+        }
+
+        async function getCamStream() {
+            try {
+                return await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+            } catch (e) {
+                // บางเครื่องเลือกกล้องหลังไม่ได้ / ไม่มีกล้องหลัง — ลองใหม่แบบไม่ระบุเงื่อนไข
+                if (e && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+                    return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+                throw e;
+            }
+        }
+
+        function camErrorMessage(e) {
+            switch (e && e.name) {
+                case 'NotAllowedError':
+                    return 'กล้องถูกปฏิเสธสิทธิ์ — แตะไอคอน 🔒 หรือ ⓘ ข้างช่อง URL → Permissions → Camera → Allow แล้วกดเปิดกล้องใหม่ (ถ้าเคยกด "บล็อก" ไว้ popup จะไม่เด้งอีก ต้องแก้ตรงนี้เท่านั้น)';
+                case 'NotFoundError': case 'DevicesNotFoundError':
+                    return 'ไม่พบกล้องบนเครื่องนี้ — ใช้ปุ่ม "เลือกรูป" ด้านล่างแทนได้';
+                case 'NotReadableError': case 'TrackStartError':
+                    return 'กล้องถูกแอปอื่นใช้อยู่ — ปิดแอปกล้อง/LINE/Zoom แล้วกดเปิดกล้องใหม่';
+                case 'SecurityError':
+                    return 'เบราว์เซอร์บล็อกกล้องด้วยเหตุผลความปลอดภัย — ต้องเปิดหน้านี้ผ่าน https://';
+                default:
+                    return 'เปิดกล้องไม่ได้ (' + ((e && e.name) || 'unknown') + ') — ใช้ปุ่ม "เลือกรูป" ด้านล่างแทนได้เลย';
+            }
+        }
+
+        function setCaptureEnabled(on) {
+            const btn = document.getElementById('hold-btn');
+            if (!btn) return;
+            btn.disabled = !on;
+            btn.classList.toggle('opacity-50', !on);
+            btn.textContent = on ? '📸 กดค้างเพื่อเก็บภาพ' : '⏳ กำลังโหลด AI...';
         }
 
         function stopCamera() {
