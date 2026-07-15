@@ -155,7 +155,7 @@ jupyter notebook
 ไพรสันต์ ผดุงเวียง (Praisan Padungweang)
 
 AI พื้นฐาน
-* [Mobile version](https://github.com/praisan/artificial_intelligence/blob/main/AI-zero2hero-workshop-mobile.html)
-* [PC version](https://github.com/praisan/artificial_intelligence/blob/main/AI-zero2hero-workshop.html)
+* [Mobile version](http://htmlpreview.github.io/?https://github.com/praisan/artificial_intelligence/blob/main/AI-zero2hero-workshop-mobile.html)
+* [PC version](http://htmlpreview.github.io/?https://github.com/praisan/artificial_intelligence/blob/main/AI-zero2hero-workshop.html)
 
 
